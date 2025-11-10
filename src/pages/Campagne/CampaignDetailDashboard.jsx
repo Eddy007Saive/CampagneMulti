@@ -69,7 +69,7 @@ import {
 } from "recharts";
 
 // Import des services Airtable
-import { getCampagneById, lancerCampagne, deleteCampagne, updateCampganeStatus, deleteCampagneWithContacts, updateCampganeEnrichissement } from '@/services/Campagne';
+import { getCampagneById, lancerCampagne, deleteCampagne, updateCampagneStatus, deleteCampagneWithContacts, updateCampagneEnrichissement } from '@/services/Campagne';
 import { getContactsByCampaignId } from '@/services/Contact';
 import { useParams, useNavigate } from "react-router-dom";
 import ModernProgressBar from "@/utils/ModernBar";
@@ -486,7 +486,7 @@ export function CampaignDetailDashboard() {
   const handleFinisCampaign = async () => {
     try {
       setTerminating(true);
-      await updateCampganeStatus(campaignId, "Terminé");
+      await updateCampagneStatus(campaignId, "Terminé");
       toastify.success('Campagne terminée !');
 
       const campaignResponse = await getCampagneById(campaignId);
@@ -501,7 +501,7 @@ export function CampaignDetailDashboard() {
   const handlePausedCampaign = async () => {
     try {
       setTerminating(true);
-      await updateCampganeStatus(campaignId, "En attente");
+      await updateCampagneStatus(campaignId, "En attente");
       toastify.success('Campagne en pause !');
 
       const campaignResponse = await getCampagneById(campaignId);

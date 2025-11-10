@@ -28,8 +28,8 @@ export function liste() {
     // États pour les filtres et le tri
     const [search, setSearch] = useState("");
     const [limit, setLimit] = useState(10);
-    const [sortBy, setSortBy] = useState("id");
-    const [sortOrder, setSortOrder] = useState("ASC");
+    const [sortBy, setSortBy] = useState("ID");
+    const [sortOrder, setSortOrder] = useState("asc");
 
     useEffect(() => {
          if (isAuthenticated() && user?.ID) {
@@ -40,7 +40,7 @@ export function liste() {
     const fetchData = async () => {
         try {
             setLoading(true);
-            const response = await getCampagnes({userId:user,
+            const response = await getCampagnes({
                 page: currentPage,
                 limit,
                 search,
@@ -75,7 +75,7 @@ export function liste() {
 
     const handleSort = (column) => {
         if (sortBy === column) {
-            setSortOrder(sortOrder === "ASC" ? "DESC" : "ASC");
+            setSortOrder(sortOrder === "asc" ? "desc" : "asc");
         } else {
             setSortBy(column);
             setSortOrder("ASC");

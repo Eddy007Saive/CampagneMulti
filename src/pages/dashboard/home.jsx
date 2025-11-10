@@ -29,6 +29,7 @@ import {
   ArrowTrendingUpIcon,
   UsersIcon,
   BuildingOfficeIcon,
+  ExclamationTriangleIcon,
   SparklesIcon,
   RocketLaunchIcon,
   BeakerIcon,

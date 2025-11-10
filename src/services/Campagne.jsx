@@ -1,131 +1,74 @@
 import axios from 'axios';
 
-// Configuration Airtable
-const AIRTABLE_BASE_ID = import.meta.env.VITE_APP_AIRTABLE_BASE_ID || 'your_base_id';
-const AIRTABLE_TABLE_NAME = import.meta.env.VITE_APP_AIRTABLE_TABLE_NAME || 'Campagnes';
-const AIRTABLE_API_KEY = import.meta.env.VITE_APP_AIRTABLE_API_KEY || 'your_api_key';
+// Configuration de l'API backend
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
 
-const airtableClient = axios.create({
-  baseURL: `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}`,
+// Créer une instance axios avec les configurations de base
+const apiClient = axios.create({
+  baseURL: API_BASE_URL,
   headers: {
-    'Authorization': `Bearer ${AIRTABLE_API_KEY}`,
     'Content-Type': 'application/json',
   },
 });
 
-// Créer une nouvelle campagne
-export const createCampagne = async (campagneData) => {
-  console.log("Creating campagne with data:", campagneData);
-  
-  try {
-    const response = await airtableClient.post(`/${AIRTABLE_TABLE_NAME}`, {
-      fields: campagneData
-    });
+// Intercepteur pour ajouter le token d'authentification
+apiClient.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('accessToken');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 
-    return {
-      success: true,
-      message: 'Campagne créée avec succès',
-      data: response.data
-    };
+/**
+ * Créer une nouvelle campagne
+ * @param {Object} campagneData - Données de la campagne
+ * @returns {Promise}
+ */
+export const createCampagne = async (campagneData) => {
+  try {
+    const response = await apiClient.post('/campagne', campagneData);
+    return response.data;
   } catch (error) {
     console.error('Erreur lors de la création de la campagne:', error);
-    throw {
-      response: {
-        data: {
-          errors: error.response?.data?.error?.message || 'Erreur lors de la création de la campagne'
-        }
-      }
-    };
+    throw error;
   }
 };
 
-// Récupérer toutes les campagnes avec pagination et filtres
 export const getCampagnes = async (params = {}) => {
   try {
     const {
       page = 1,
       limit = 10,
       search = '',
-      sortBy = 'ID',
-      sortOrder = 'ASC',
-      userId = null
+      sortBy = 'id',
+      sortOrder = 'asc',
     } = params;
 
-    let airtableParams = {
-      maxRecords: limit,
-      pageSize: limit,
-    };
-
-    // Tri
-    if (sortBy) {
-      const direction = sortOrder === 'DESC' ? 'desc' : 'asc';
-      airtableParams.sort = [{ field: mapFieldName(sortBy), direction }];
-    }
-
-    // Construction du filtre
-    let filterFormulas = [];
-
-    // Filtre par user_id (OBLIGATOIRE)
-    if (userId?.ID) {
-      filterFormulas.push(`SEARCH("${userId.ID}", ARRAYJOIN({user_id}))`);
-    }
-
-    // Recherche/Filtrage
-    if (search) {
-      filterFormulas.push(`OR(
-        SEARCH(LOWER("${search}"), LOWER({Nom de la campagne})),
-        SEARCH(LOWER("${search}"), LOWER({Poste recherché})),
-        SEARCH(LOWER("${search}"), LOWER({Zone géographique})),
-        SEARCH(LOWER("${search}"), LOWER({Langues parlées})),
-        SEARCH(LOWER("${search}"), LOWER({Secteurs souhaités}))
-      )`);
-    }
-
-    // Combiner les filtres avec AND
-    if (filterFormulas.length > 0) {
-      airtableParams.filterByFormula = filterFormulas.length === 1 
-        ? filterFormulas[0] 
-        : `AND(${filterFormulas.join(', ')})`;
-    }
-
-    const response = await airtableClient.get(`/${AIRTABLE_TABLE_NAME}`, {
-      params: airtableParams
+    const queryParams = new URLSearchParams({
+      page,
+      limit,
+      sortBy,
+      sortOrder,
+      ...(search && { search }),
     });
 
-    // Transformer les données pour correspondre au format attendu
-    const transformedRecords = response.data.records.map(record => ({
-      id: record.id,
-      nom: record.fields['Nom de la campagne'] || '',
-      poste: record.fields['Poste recherché'] || '',
-      zone: record.fields['Zone géographique'] || '',
-      seniorite: record.fields['Seniorite'] || '',
-      tailleEntreprise: record.fields['Taille_entreprise'] || '',
-      langues: record.fields['Langues parlées'] || '',
-      secteurs: record.fields['Secteurs souhaités'] || '',
-      dateCreation: record.fields['Date de création'] || '',
-      contacts: record.fields['Contacts'] || '',
-      statut: record.fields['Statut'] || 'Actif',
-      lancerCampagne: record.fields['Lancer Campagne'] || '',
-      Template_message: record.fields['Template_message'] || '',
-      enrichissement: record.fields["Statut d'enrichissement"] || 'En attente',
-      jours_enrichissement: record.fields["Jours_enrichissement"] || '',
-      profileParJours: record.fields["Profils/jour"] || 0,
-      messageParJours: record.fields["Messages/jour"] || 0,
-      InstructionRelance4Jours: record.fields['InstructionRelance4Jours'] || '',
-      InstructionRelance7Jours: record.fields['InstructionRelance7Jours'] || '',
-      InstructionRelance14Jours: record.fields['InstructionRelance14Jours'] || '',
-    }));
+    const response = await apiClient.get(`/campagne/user?${queryParams}`);
+    console.log(response);
+    
 
-    // Simulation de pagination (Airtable gère différemment)
-    const totalItems = transformedRecords.length;
-    const totalPages = Math.ceil(totalItems / limit);
+    // ✅ Ton backend renvoie : success + result.data + pagination
+    const result = response.data.result;
 
     return {
       data: {
-        campagnes: transformedRecords,
-        totalItems,
-        totalPages,
-        currentPage: page
+        campagnes: result?.data || [],
+        totalItems: result?.pagination?.totalRecords || 0,
+        totalPages: result?.pagination?.totalPages || 1,
+        currentPage: result?.pagination?.currentPage || 1
       }
     };
   } catch (error) {
@@ -134,211 +77,80 @@ export const getCampagnes = async (params = {}) => {
   }
 };
 
-// Récupérer une campagne par ID
-export const getCampagneById = async (id, userId = null) => {
+
+/**
+ * Récupérer une campagne par ID
+ * @param {string} id - ID de la campagne
+ * @returns {Promise}
+ */
+export const getCampagneById = async (id) => {
   try {
-    const response = await airtableClient.get(`/${AIRTABLE_TABLE_NAME}/${id}`);
-    
-    const record = response.data;
-    
-    // Vérifier que la campagne appartient à l'utilisateur
-    if (userId?.ID) {
-      const userIds = record.fields['user_id'] || [];
-      const hasAccess = userIds.some(uid => uid === userId.ID);
-      
-      if (!hasAccess) {
-        throw new Error('Accès non autorisé à cette campagne');
-      }
-    }
-    
-    return {
-      data: {
-        id: record.id,
-        nom: record.fields['Nom de la campagne'] || '',
-        poste: record.fields['Poste recherché'] || '',
-        zone: record.fields['Zone géographique'] || '',
-        seniorite: record.fields['Seniorite'] || '',
-        tailleEntreprise: record.fields['Taille_entreprise'] || '',
-        langues: record.fields['Langues parlées'] || '',
-        secteurs: record.fields['Secteurs souhaités'] || '',
-        dateCreation: record.fields['Date de création'] || '',
-        contacts: record.fields['Contacts'] || '',
-        statut: record.fields['Statut'] || 'Actif',
-        lancerCampagne: record.fields['Lancer Campagne'] || '',
-        Template_message: record.fields['Template_message'] || '',
-        enrichissement: record.fields["Statut d'enrichissement"] || 'En attente',
-        jours_enrichissement: record.fields["Jours_enrichissement"] || '',
-        profileParJours: record.fields["Profils/jour"] || 0,
-        messageParJours: record.fields["Messages/jour"] || 0,
-        InstructionRelance4Jours: record.fields['InstructionRelance4Jours'] || '',
-        InstructionRelance7Jours: record.fields['InstructionRelance7Jours'] || '',
-        InstructionRelance14Jours: record.fields['InstructionRelance14Jours'] || '',
-      }
-    };
+    const response = await apiClient.get(`/campagne/${id}`);
+    return response.data;
   } catch (error) {
     console.error('Erreur lors de la récupération de la campagne:', error);
     throw error;
   }
 };
 
-// Mettre à jour une campagne
-export const updateCampagne = async (id, campagneData, userId = null) => {
+/**
+ * Mettre à jour une campagne
+ * @param {string} id - ID de la campagne
+ * @param {Object} campagneData - Données à mettre à jour
+ * @returns {Promise}
+ */
+export const updateCampagne = async (id, campagneData) => {
   try {
-    // Vérifier d'abord que l'utilisateur a accès à cette campagne
-    if (userId?.ID) {
-      await getCampagneById(id, userId);
-    }
-    
-    const response = await airtableClient.patch(`/${AIRTABLE_TABLE_NAME}/${id}`, {
-      fields: campagneData
-    });
-
-    return {
-      success: true,
-      message: 'Campagne mise à jour avec succès',
-      data: response.data
-    };
+    const response = await apiClient.patch(`/campagnes/${id}`, campagneData);
+    return response.data;
   } catch (error) {
     console.error('Erreur lors de la mise à jour de la campagne:', error);
-    throw {
-      response: {
-        data: {
-          errors: error.response?.data?.error?.message || 'Erreur lors de la mise à jour de la campagne'
-        }
-      }
-    };
+    throw error;
   }
 };
 
-// Supprimer une campagne
-export const deleteCampagne = async (id, userId = null) => {
+/**
+ * Supprimer une campagne
+ * @param {string} id - ID de la campagne
+ * @returns {Promise}
+ */
+export const deleteCampagne = async (id) => {
   try {
-    // Vérifier d'abord que l'utilisateur a accès à cette campagne
-    if (userId?.ID) {
-      await getCampagneById(id, userId);
-    }
-    
-    await airtableClient.delete(`/${AIRTABLE_TABLE_NAME}/${id}`);
-    
-    return {
-      success: true,
-      message: 'Campagne supprimée avec succès'
-    };
+    const response = await apiClient.delete(`/campagnes/${id}`);
+    return response.data;
   } catch (error) {
     console.error('Erreur lors de la suppression de la campagne:', error);
-    throw {
-      response: {
-        data: {
-          errors: error.response?.data?.error?.message || 'Erreur lors de la suppression de la campagne'
-        }
-      }
-    };
+    throw error;
   }
 };
 
-
-export const lancerCampagne = async (id, userId = null) => {
+/**
+ * Lancer une campagne via webhook
+ * @param {string} id - ID de la campagne
+ * @returns {Promise}
+ */
+export const lancerCampagne = async (id) => {
   try {
-    const campagne = await getCampagneById(id, userId);
-    const webhookUrl = campagne.data.lancerCampagne.url;
-
-    if (!webhookUrl) {
-      throw new Error('URL de webhook non trouvée pour cette campagne');
-    }
-
-    console.log(webhookUrl)
-
-    const response = await axios.post(webhookUrl)
-    
-  
+    const response = await apiClient.post(`/campagnes/${id}/lancer`);
+    return response.data;
   } catch (error) {
     console.error('Erreur lors du lancement de la campagne:', error);
-    
-    if (error.response) {
-      throw {
-        response: {
-          data: {
-            errors: `Erreur ${error.response.status}: ${error.response.data || 'Erreur du webhook'}`,
-            webhookError: error.response.data
-          }
-        }
-      };
-    } else if (error.request) {
-      throw {
-        response: {
-          data: {
-            errors: 'Webhook inaccessible - vérifiez l\'URL et la connexion'
-          }
-        }
-      };
-    } else {
-      throw {
-        response: {
-          data: {
-            errors: error.message || 'Erreur lors du lancement de la campagne'
-          }
-        }
-      };
-    }
+    throw error;
   }
 };
 
-const mapFieldName = (fieldName) => {
-  const fieldMapping = {
-    'id': 'ID',
-    'nom': 'Nom de la campagne',
-    'poste': 'Poste recherché',
-    'zone': 'Zone géographique',
-    'seniorite': 'Seniorite',
-    'tailleEntreprise': 'Taille_entreprise',
-    'langues': 'Langues parlées',
-    'secteurs': 'Secteurs souhaités',
-    'statut': 'Statut'
-  };
-  
-  return fieldMapping[fieldName] || fieldName;
-};
-
-export const getAllCampagnes = async (userId = null) => {
+/**
+ * Récupérer toutes les campagnes (sans pagination)
+ * @returns {Promise}
+ */
+export const getAllCampagnes = async () => {
   try {
-    let allRecords = [];
-    let offset = '';
-
-    do {
-      const params = {
-        pageSize: 100, // Maximum pour Airtable
-        ...(offset && { offset })
-      };
-
-      // Ajouter le filtre user_id si fourni
-      if (userId?.ID) {
-        params.filterByFormula = `SEARCH("${userId.ID}", ARRAYJOIN({user_id}))`;
-      }
-
-      const response = await airtableClient.get(`/${AIRTABLE_TABLE_NAME}`, { params });
-      
-      allRecords = [...allRecords, ...response.data.records];
-      offset = response.data.offset;
-    } while (offset);
-
-    const transformedRecords = allRecords.map(record => ({
-      id: record.id,
-      nom: record.fields['Nom de la campagne'] || '',
-      poste: record.fields['Poste recherché'] || '',
-      zone: record.fields['Zone géographique'] || '',
-      seniorite: record.fields['Seniorite'] || '',
-      tailleEntreprise: record.fields['Taille_entreprise'] || '',
-      langues: record.fields['Langues parlées'] || '',
-      secteurs: record.fields['Secteurs souhaités'] || '',
-      dateCreation: record.fields['Date de création'] || '',
-      contacts: record.fields['Contacts'] || '',
-      statut: record.fields['Statut'] || 'Actif',
-      lancerCampagne: record.fields['Lancer Campagne'] || '',
-      jours_enrichissement: record.fields["Jours_enrichissement"] || '',
-    }));
-
+    const response = await apiClient.get('/campagnes/user', {
+      params: { limit: 10000 }
+    });
+    
     return {
-      data: transformedRecords
+      data: response.data.data || []
     };
   } catch (error) {
     console.error('Erreur lors de la récupération de toutes les campagnes:', error);
@@ -346,167 +158,125 @@ export const getAllCampagnes = async (userId = null) => {
   }
 };
 
-export const updateCampganeStatus = async (ID_CONTACT, statut, userId = null) => {
+/**
+ * Mettre à jour le statut d'une campagne
+ * @param {string} id - ID de la campagne
+ * @param {string} statut - Nouveau statut
+ * @returns {Promise}
+ */
+export const updateCampagneStatus = async (id, statut) => {
   try {
-    // Vérifier d'abord que l'utilisateur a accès à cette campagne
-    if (userId?.ID) {
-      await getCampagneById(ID_CONTACT, userId);
-    }
-    
-    const response = await airtableClient.patch(`/${AIRTABLE_TABLE_NAME}/${ID_CONTACT}`, {
-      fields: {
-        'Statut': statut
-      }
+    const response = await apiClient.patch(`/campagnes/${id}`, {
+      statut: statut
     });
-
-    return {
-      success: true,
-      message: 'Statut du campagne mis à jour avec succès',
-      data: response.data
-    };
+    return response.data;
   } catch (error) {
     console.error('Erreur lors de la mise à jour du statut:', error);
-    throw {
-      response: {
-        data: {
-          errors: error.response?.data?.error?.message || 'Erreur lors de la mise à jour du statut'
-        }
-      }
-    };
+    throw error;
   }
 };
 
-export const updateCampganeEnrichissement = async (ID_CONTACT, statut, userId = null) => {
+/**
+ * Mettre à jour le statut d'enrichissement d'une campagne
+ * @param {string} id - ID de la campagne
+ * @param {string} statut - Nouveau statut d'enrichissement
+ * @returns {Promise}
+ */
+export const updateCampagneEnrichissement = async (id, statut) => {
   try {
-    // Vérifier d'abord que l'utilisateur a accès à cette campagne
-    if (userId?.ID) {
-      await getCampagneById(ID_CONTACT, userId);
-    }
-    
-    const response = await airtableClient.patch(`/${AIRTABLE_TABLE_NAME}/${ID_CONTACT}`, {
-      fields: {
-        'Statut d\'enrichissement': statut
-      }
+    const response = await apiClient.patch(`/campagne/${id}`, {
+      enrichissement: statut
     });
-
-    return {
-      success: true,
-      message: 'Statut du campagne mis à jour avec succès',
-      data: response.data
-    };
+    return response.data;
   } catch (error) {
-    console.error('Erreur lors de la mise à jour du statut:', error);
-    throw {
-      response: {
-        data: {
-          errors: error.response?.data?.error?.message || 'Erreur lors de la mise à jour du statut'
-        }
-      }
-    };
+    console.error('Erreur lors de la mise à jour du statut d\'enrichissement:', error);
+    throw error;
   }
 };
 
-
-// Supprimer tous les contacts liés à une campagne
-export const deleteContactsByCampagne = async (campagneId, userId = null) => {
+/**
+ * Supprimer tous les contacts liés à une campagne
+ * @param {string} campagneId - ID de la campagne
+ * @returns {Promise}
+ */
+export const deleteContactsByCampagne = async (campagneId) => {
   try {
-    // Vérifier d'abord que l'utilisateur a accès à cette campagne
-    if (userId?.ID) {
-      await getCampagneById(campagneId, userId);
-    }
-    
-    // Configuration pour la table des contacts
-    const CONTACTS_TABLE_NAME = import.meta.env.VITE_APP_AIRTABLE_CONTACTS_TABLE_NAME || 'Contacts';
-    
-    let allContactsToDelete = [];
-    let offset = '';
-
-    // Récupérer tous les contacts liés à cette campagne
-    do {
-      const params = {
-        pageSize: 100,
-        filterByFormula: `{Campagne} = "${campagneId}"`, // Ajustez le nom du champ selon votre structure
-        ...(offset && { offset })
-      };
-
-      const response = await airtableClient.get(`/${CONTACTS_TABLE_NAME}`, { params });
-      
-      // Collecter les IDs des contacts à supprimer
-      const contactIds = response.data.records.map(record => record.id);
-      allContactsToDelete = [...allContactsToDelete, ...contactIds];
-      
-      offset = response.data.offset;
-    } while (offset);
-
-    if (allContactsToDelete.length === 0) {
-      return {
-        success: true,
-        message: 'Aucun contact trouvé pour cette campagne',
-        deletedCount: 0
-      };
-    }
-
-    // Supprimer les contacts par batch (max 10 par requête selon l'API Airtable)
-    const batchSize = 10;
-    let deletedCount = 0;
-
-    for (let i = 0; i < allContactsToDelete.length; i += batchSize) {
-      const batch = allContactsToDelete.slice(i, i + batchSize);
-      
-      try {
-        await airtableClient.delete(`/${CONTACTS_TABLE_NAME}`, {
-          params: {
-            records: batch
-          }
-        });
-        
-        deletedCount += batch.length;
-      } catch (batchError) {
-        console.error(`Erreur lors de la suppression du batch ${i / batchSize + 1}:`, batchError);
-        // Continuer avec les autres batches même si un échoue
-      }
-    }
-
-    return {
-      success: true,
-      message: `${deletedCount} contacts supprimés avec succès`,
-      deletedCount
-    };
-
+    // Cette fonctionnalité devrait être implémentée côté backend
+    // Pour l'instant, on peut créer un endpoint dédié
+    const response = await apiClient.delete(`/campagne/${campagneId}/contacts`);
+    return response.data;
   } catch (error) {
     console.error('Erreur lors de la suppression des contacts:', error);
-    throw {
-      response: {
-        data: {
-          errors: error.response?.data?.error?.message || 'Erreur lors de la suppression des contacts'
-        }
-      }
-    };
+    throw error;
   }
 };
 
-export const deleteCampagneWithContacts = async (id, userId = null) => {
+/**
+ * Supprimer une campagne avec tous ses contacts
+ * @param {string} id - ID de la campagne
+ * @returns {Promise}
+ */
+export const deleteCampagneWithContacts = async (id) => {
   try {
-    // D'abord supprimer tous les contacts liés
-    const contactsResult = await deleteContactsByCampagne(id, userId);
-    
-    // Puis supprimer la campagne elle-même
-    const campagneResult = await deleteCampagne(id, userId);
-
-    return {
-      success: true,
-      message: `Campagne supprimée avec succès. ${contactsResult.deletedCount} contacts associés ont également été supprimés`,
-      contactsDeleted: contactsResult.deletedCount
-    };
-
+    // Cette fonctionnalité devrait être implémentée côté backend
+    // Pour l'instant, on supprime juste la campagne
+    const response = await apiClient.delete(`/campagne/${id}`);
+    return response.data;
   } catch (error) {
     console.error('Erreur lors de la suppression complète:', error);
-    throw {
-      response: {
-        data: {
-          errors: error.response?.data?.error?.message || 'Erreur lors de la suppression complète'
-        }
+    throw error;
+  }
+};
+
+/**
+ * Rechercher des campagnes
+ * @param {Object} criteria - Critères de recherche
+ * @returns {Promise}
+ */
+export const searchCampagnes = async (criteria) => {
+  try {
+    const response = await apiClient.post('/campagne/search', criteria);
+    
+    return {
+      data: {
+        campagnes: response.data.data || [],
+        totalItems: response.data.pagination?.totalRecords || 0,
+        totalPages: response.data.pagination?.totalPages || 1,
+        currentPage: response.data.pagination?.currentPage || 1
       }
     };
+  } catch (error) {
+    console.error('Erreur lors de la recherche de campagnes:', error);
+    throw error;
   }
+};
+
+/**
+ * Obtenir les statistiques des campagnes
+ * @returns {Promise}
+ */
+export const getCampagneStats = async () => {
+  try {
+    const response = await apiClient.get('/campagne/stats');
+    return response.data;
+  } catch (error) {
+    console.error('Erreur lors de la récupération des statistiques:', error);
+    throw error;
+  }
+};
+
+export default {
+  createCampagne,
+  getCampagnes,
+  getCampagneById,
+  updateCampagne,
+  deleteCampagne,
+  lancerCampagne,
+  getAllCampagnes,
+  updateCampagneStatus,
+  updateCampagneEnrichissement,
+  deleteContactsByCampagne,
+  deleteCampagneWithContacts,
+  searchCampagnes,
+  getCampagneStats,
 };
