@@ -23,6 +23,7 @@ export const useUnreadNotifications = () => {
     try {
       setIsLoading(true);
       const response = await getUnreadNotificationsCount();
+      console.log(response);
       
       setUnreadCount(response.data.count);
     } catch (error) {

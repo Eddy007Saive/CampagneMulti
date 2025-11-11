@@ -1,6 +1,7 @@
 
 import { emitNotificationEvent } from '@/utils/NotificationProvider';
 import apiClient from '@/utils/ApiClient';
+const NOTIFICATION8_API_BASE_URL = '/notification';
 
 
 // Fonction utilitaire pour déclencher les événements
@@ -18,7 +19,7 @@ const triggerNotificationUpdate = () => {
  */
 export const createNotification = async (notificationData) => {
   try {
-    const response = await apiClient.post('/', notificationData);
+    const response = await apiClient.post(NOTIFICATION8_API_BASE_URL, notificationData);
     triggerNotificationUpdate();
     return response.data;
   } catch (error) {
@@ -34,7 +35,7 @@ export const createNotification = async (notificationData) => {
  */
 export const createMultipleNotifications = async (notifications) => {
   try {
-    const response = await apiClient.post('/batch', { notifications });
+    const response = await apiClient.post(`${NOTIFICATION8_API_BASE_URL}/batch`, { notifications });
     triggerNotificationUpdate();
     return response.data;
   } catch (error) {
@@ -61,7 +62,7 @@ export const getNotifications = async (params = {}) => {
       sortOrder = 'desc'
     } = params;
 
-    const response = await apiClient.get('/', {
+    const response = await apiClient.get(`${NOTIFICATION8_API_BASE_URL}`, {
       params: {
         page,
         limit,
@@ -86,7 +87,7 @@ export const getNotifications = async (params = {}) => {
  * @param {Object} params - Paramètres de recherche
  * @returns {Promise<Object>}
  */
-export const getUserNotifications = async (params = {}) => {
+export const getAllNotifications = async (params = {}) => {
   try {
     const {
       page = 1,
@@ -99,7 +100,7 @@ export const getUserNotifications = async (params = {}) => {
       sortOrder = 'desc'
     } = params;
 
-    const response = await apiClient.get('/user', {
+    const response = await apiClient.get(`${NOTIFICATION8_API_BASE_URL}/user`, {
       params: {
         page,
         limit,
@@ -113,7 +114,7 @@ export const getUserNotifications = async (params = {}) => {
     });
 
     return response.data;
-    
+
   } catch (error) {
     console.error('Erreur lors de la récupération des notifications utilisateur:', error);
     throw error;
@@ -127,7 +128,7 @@ export const getUserNotifications = async (params = {}) => {
  */
 export const getNotificationById = async (id) => {
   try {
-    const response = await apiClient.get(`/${id}`);
+    const response = await apiClient.get(`${NOTIFICATION8_API_BASE_URL}/${id}`);
     return response.data;
   } catch (error) {
     console.error('Erreur lors de la récupération de la notification:', error);
@@ -143,7 +144,7 @@ export const getNotificationById = async (id) => {
  */
 export const updateNotification = async (id, notificationData) => {
   try {
-    const response = await apiClient.patch(`/${id}`, notificationData);
+    const response = await apiClient.patch(`${NOTIFICATION8_API_BASE_URL}/${id}`, notificationData);
     triggerNotificationUpdate();
     return response.data;
   } catch (error) {
@@ -159,7 +160,7 @@ export const updateNotification = async (id, notificationData) => {
  */
 export const deleteNotification = async (id) => {
   try {
-    const response = await apiClient.delete(`/${id}`);
+    const response = await apiClient.delete(`${NOTIFICATION8_API_BASE_URL}/${id}`);
     triggerNotificationUpdate();
     return response.data;
   } catch (error) {
@@ -177,7 +178,7 @@ export const deleteNotification = async (id) => {
  */
 export const markNotificationAsRead = async (id) => {
   try {
-    const response = await apiClient.patch(`/${id}/read`);
+    const response = await apiClient.patch(`${NOTIFICATION8_API_BASE_URL}/${id}/read`);
     triggerNotificationUpdate();
     return response.data;
   } catch (error) {
@@ -193,7 +194,7 @@ export const markNotificationAsRead = async (id) => {
  */
 export const markNotificationAsUnread = async (id) => {
   try {
-    const response = await apiClient.patch(`/${id}/unread`);
+    const response = await apiClient.patch(`${NOTIFICATION8_API_BASE_URL}/${id}/unread`);
     triggerNotificationUpdate();
     return response.data;
   } catch (error) {
@@ -209,7 +210,7 @@ export const markNotificationAsUnread = async (id) => {
  */
 export const markMultipleNotificationsAsRead = async (ids) => {
   try {
-    const response = await apiClient.patch('/batch/read', { ids });
+    const response = await apiClient.patch(`${NOTIFICATION8_API_BASE_URL}/batch/read`, { ids });
     triggerNotificationUpdate();
     return response.data;
   } catch (error) {
@@ -225,7 +226,7 @@ export const markMultipleNotificationsAsRead = async (ids) => {
  */
 export const markMultipleNotificationsAsUnread = async (ids) => {
   try {
-    const response = await apiClient.patch('/batch/unread', { ids });
+    const response = await apiClient.patch(`${NOTIFICATION8_API_BASE_URL}/batch/unread`, { ids });
     triggerNotificationUpdate();
     return response.data;
   } catch (error) {
@@ -240,7 +241,7 @@ export const markMultipleNotificationsAsUnread = async (ids) => {
  */
 export const markAllNotificationsAsRead = async () => {
   try {
-    const response = await apiClient.patch('/all/read');
+    const response = await apiClient.patch(`${NOTIFICATION8_API_BASE_URL}/all/read`);
     triggerNotificationUpdate();
     return response.data;
   } catch (error) {
@@ -258,7 +259,7 @@ export const markAllNotificationsAsRead = async () => {
  */
 export const deleteMultipleNotifications = async (ids) => {
   try {
-    const response = await apiClient.delete('/batch', { data: { ids } });
+    const response = await apiClient.delete(`${NOTIFICATION8_API_BASE_URL}/batch`, { data: { ids } });
     triggerNotificationUpdate();
     return response.data;
   } catch (error) {
@@ -277,7 +278,7 @@ export const deleteMultipleNotifications = async (ids) => {
 export const getUnreadNotificationsCount = async (userId = null) => {
   try {
     const params = userId ? { userId } : {};
-    const response = await apiClient.get('/unread/count', { params });
+    const response = await apiClient.get(`${NOTIFICATION8_API_BASE_URL}/unread/count`, { params });
     return response.data;
   } catch (error) {
     console.error('Erreur lors du comptage des notifications non lues:', error);
@@ -291,7 +292,7 @@ export const getUnreadNotificationsCount = async (userId = null) => {
  */
 export const getUserUnreadNotificationsCount = async () => {
   try {
-    const response = await apiClient.get('/user/unread/count');
+    const response = await apiClient.get(`${NOTIFICATION8_API_BASE_URL}/user/unread/count`);
     return response.data;
   } catch (error) {
     console.error('Erreur lors du comptage des notifications non lues utilisateur:', error);
@@ -309,7 +310,9 @@ export const getUserUnreadNotificationsCount = async () => {
 export const getNotificationsStats = async (userId = null) => {
   try {
     const params = userId ? { userId } : {};
-    const response = await apiClient.get('/stats', { params });
+    const response = await apiClient.get(`${NOTIFICATION8_API_BASE_URL}/user/stats`, { params });
+    console.log(response);
+    
     return response.data;
   } catch (error) {
     console.error('Erreur lors de la récupération des statistiques:', error);
@@ -323,7 +326,7 @@ export const getNotificationsStats = async (userId = null) => {
  */
 export const getUserNotificationsStats = async () => {
   try {
-    const response = await apiClient.get('/user/stats');
+    const response = await apiClient.get(`${NOTIFICATION8_API_BASE_URL}/user/stats`);
     return response.data;
   } catch (error) {
     console.error('Erreur lors de la récupération des statistiques utilisateur:', error);
@@ -340,7 +343,7 @@ export const getUserNotificationsStats = async () => {
  */
 export const cleanOldNotifications = async (daysOld = 30) => {
   try {
-    const response = await apiClient.delete('/clean', {
+    const response = await apiClient.delete(`${NOTIFICATION8_API_BASE_URL}/clean`, {
       params: { daysOld }
     });
     triggerNotificationUpdate();
@@ -358,7 +361,7 @@ export const cleanOldNotifications = async (daysOld = 30) => {
  */
 export const searchNotifications = async (criteria) => {
   try {
-    const response = await apiClient.post('/search', criteria);
+    const response = await apiClient.post(`${NOTIFICATION8_API_BASE_URL}/search`, criteria);
     return response.data;
   } catch (error) {
     console.error('Erreur lors de la recherche de notifications:', error);
@@ -447,7 +450,7 @@ export default {
   createNotification,
   createMultipleNotifications,
   getNotifications,
-  getUserNotifications,
+  getAllNotifications,
   getNotificationById,
   updateNotification,
   deleteNotification,
