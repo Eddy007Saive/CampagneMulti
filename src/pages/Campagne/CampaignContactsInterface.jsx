@@ -43,13 +43,13 @@ import {
     XCircleIcon,
     SparklesIcon,
 } from "@heroicons/react/24/outline";
-import { 
-    getContactsByCampaignId, 
-    updateContactStatus, 
-    updateContactProfile, 
+import {
+    getContactsByCampaignId,
+    updateContactStatus,
+    updateContactProfile,
     deleteContact,
     autoSortProfiles,
-    manualSortProfiles 
+    manualSortProfiles
 } from "@/services/Contact";
 import { getCampagneById } from "@/services/Campagne";
 import { Link, useNavigate, useParams } from "react-router-dom";
@@ -65,7 +65,6 @@ export function CampaignContactsInterface() {
     const [contacts, setContacts] = useState([]);
     const { user, isAuthenticated } = useAuth();
 
-    const [filteredContacts, setFilteredContacts] = useState([]);
     const [campaignData, setCampaignData] = useState(null);
     const [totalItems, setTotalItems] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
@@ -78,8 +77,8 @@ export function CampaignContactsInterface() {
     const [statusFilter, setStatusFilter] = useState("");
     const [profileFilter, setProfileFilter] = useState("");
     const [limit, setLimit] = useState(10);
-    const [sortBy, setSortBy] = useState("nom");
-    const [sortOrder, setSortOrder] = useState("ASC");
+    const [sortBy, setSortBy] = useState("Nom");
+    const [sortOrder, setSortOrder] = useState("asc");
 
     // États pour les dialogs et actions
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -92,7 +91,7 @@ export function CampaignContactsInterface() {
     // Récupération de l'ID de campagne depuis l'URL
     const { id } = useParams();
     const campaignId = id;
-    
+
     const navigate = useNavigate();
 
     // Options de statut
@@ -100,11 +99,8 @@ export function CampaignContactsInterface() {
         { value: "", label: "Tous les statuts" },
         { value: "Non contacté", label: "Non contacté" },
         { value: "Message envoyé", label: "Message envoyé" },
-        { value: "Réponse reçue", label: "Réponse reçue" },
-        { value: "Intéressé", label: "Intéressé" },
-        { value: "Non intéressé", label: "Non intéressé" },
-        { value: "À relancer", label: "À relancer" },
-        { value: "Rendez-vous pris", label: "Rendez-vous pris" },
+        { value: "Répondu", label: "Réponse reçue" },
+        { value: "À recontacter", label: "À recontacter" },
     ];
 
     // Options de profil
@@ -121,17 +117,13 @@ export function CampaignContactsInterface() {
         } else {
             setLoadingCampaign(false);
         }
-    }, [user,campaignId]);
+    }, [user, campaignId]);
 
     useEffect(() => {
-        if (campaignData  && user) {
-            fetchContacts();
-        }
-    }, [user?.ID,campaignData, sortBy, sortOrder, statusFilter, profileFilter, search]);
 
-    useEffect(() => {
-        applyFiltersAndPagination();
-    }, [contacts, currentPage, limit]);
+        fetchContacts();
+
+    }, [user?.ID, sortBy, sortOrder, statusFilter, profileFilter, search]);
 
     const loadCampaignData = async () => {
         try {
@@ -148,19 +140,21 @@ export function CampaignContactsInterface() {
     const fetchContacts = async () => {
         try {
             setLoading(true);
-            
+
             const response = await getContactsByCampaignId(campaignId, {
                 search,
                 statusFilter,
                 profileFilter,
                 sortBy,
                 sortOrder,
-                userId:user
+                userId: user
             });
+
+            console.log(response.data);
 
             setContacts(response.data || []);
             setTotalItems(response.totalItems || 0);
-            
+
         } catch (error) {
             console.error("Erreur lors du chargement des contacts:", error);
             setContacts([]);
@@ -170,15 +164,7 @@ export function CampaignContactsInterface() {
         }
     };
 
-    const applyFiltersAndPagination = () => {
-        const totalPages = Math.ceil(totalItems / limit);
-        const startIndex = (currentPage - 1) * limit;
-        const endIndex = startIndex + limit;
-        const paginatedContacts = contacts.slice(startIndex, endIndex);
-        
-        setFilteredContacts(paginatedContacts);
-        setTotalPages(totalPages);
-    };
+
 
     const handleSearch = (e) => {
         e.preventDefault();
@@ -197,10 +183,10 @@ export function CampaignContactsInterface() {
 
     const handleSort = (column) => {
         if (sortBy === column) {
-            setSortOrder(sortOrder === "ASC" ? "DESC" : "ASC");
+            setSortOrder(sortOrder === "asc" ? "desc" : "asc");
         } else {
             setSortBy(column);
-            setSortOrder("ASC");
+            setSortOrder("asc");
         }
         setCurrentPage(1);
     };
@@ -314,7 +300,7 @@ export function CampaignContactsInterface() {
     const getConnectionBadge = (degre) => {
         const colors = {
             1: "from-blackcore-rouge to-green-400",
-            2: "from-blue-500 to-cyan-400", 
+            2: "from-blue-500 to-cyan-400",
             3: "from-gray-500 to-gray-400"
         };
         return colors[degre] || "from-gray-400 to-gray-500";
@@ -378,7 +364,7 @@ export function CampaignContactsInterface() {
 
     const columns = [
         { key: "nom", label: "Contact" },
-        { key: "posteActuel", label: "Poste" },
+        { key: "posteActuel", label: "Cible" },
         { key: "entrepriseActuelle", label: "Entreprise" },
         { key: "localisation", label: "Localisation" },
         { key: "statut", label: "Statut" },
@@ -491,9 +477,9 @@ export function CampaignContactsInterface() {
                                     </span>
                                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
                                 </Button>
-                                
-                                <Link 
-                                    to="/dashboard/nouveau/contact" 
+
+                                <Link
+                                    to="/dashboard/nouveau/contact"
                                     className="relative bg-gradient-to-r from-blanc-pur via-primary-100 to-blanc-pur text-noir-absolu px-8 py-3 rounded-lg font-poppins font-bold text-sm uppercase tracking-wider transition-all duration-500 hover:scale-105 shadow-lg hover:shadow-2xl group-hover:shadow-primary-500/50 border border-transparent hover:border-primary-500/50 overflow-hidden group flex items-center gap-2"
                                 >
                                     <span className="relative z-10 flex items-center space-x-2">
@@ -513,13 +499,13 @@ export function CampaignContactsInterface() {
                                 <div className="absolute inset-0 opacity-5">
                                     <div className="w-full h-full bg-gradient-to-r from-transparent via-blackcore-rouge/20 to-transparent"></div>
                                 </div>
-                                
+
                                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6 text-sm relative z-10">
                                     <div className="flex items-center space-x-3">
                                         <div className="w-2 h-2 bg-blackcore-rouge rounded-full animate-pulse"></div>
                                         <div>
                                             <Typography variant="small" className="font-orbitron text-blackcore-blanc/60 uppercase tracking-wider text-xs">
-                                                Poste recherché
+                                                Cible recherché
                                             </Typography>
                                             <Typography className="text-blackcore-blanc font-poppins font-medium">
                                                 {campaignData.poste}
@@ -557,11 +543,10 @@ export function CampaignContactsInterface() {
                                             <Chip
                                                 variant="gradient"
                                                 value={campaignData.statut}
-                                                className={`py-1 px-3 text-xs font-orbitron tracking-wider uppercase ${
-                                                    campaignData.statut === "Actif"
+                                                className={`py-1 px-3 text-xs font-orbitron tracking-wider uppercase ${campaignData.statut === "Actif"
                                                         ? "bg-gradient-to-r from-blackcore-rouge via-green-500 to-emerald-400 text-blackcore-blanc"
                                                         : "bg-gradient-to-r from-blackcore-noir to-gray-700 text-blackcore-blanc/70"
-                                                }`}
+                                                    }`}
                                             />
                                         </div>
                                     </div>
@@ -582,7 +567,7 @@ export function CampaignContactsInterface() {
                                     </Typography>
                                 </div>
                             </div>
-                            
+
                             <div className="flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-blackcore-noir/60 via-slate-800/60 to-blackcore-noir/60 rounded-lg border border-orange-500/30 backdrop-blur-sm relative overflow-hidden group">
                                 <div className="absolute inset-0 bg-gradient-to-r from-orange-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                                 <div className="relative z-10 flex items-center gap-3">
@@ -592,7 +577,7 @@ export function CampaignContactsInterface() {
                                     </Typography>
                                 </div>
                             </div>
-                            
+
                             <div className="flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-blackcore-noir/60 via-slate-800/60 to-blackcore-noir/60 rounded-lg border border-red-500/30 backdrop-blur-sm relative overflow-hidden group">
                                 <div className="absolute inset-0 bg-gradient-to-r from-red-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                                 <div className="relative z-10 flex items-center gap-3">
@@ -785,17 +770,16 @@ export function CampaignContactsInterface() {
                                         </tr>
                                     </thead>
                                     <tbody className="bg-gradient-to-b from-blackcore-gris/50 to-blackcore-gris">
-                                        {filteredContacts.length > 0 ? (
-                                            filteredContacts.map((contact, index) => {
-                                                const className = `py-5 px-6 transition-all duration-200 hover:bg-gradient-to-r hover:from-blackcore-rouge/5 hover:via-blackcore-magenta/5 hover:to-cyan-500/5 ${
-                                                    index === filteredContacts.length - 1 ? "" : "border-b border-blackcore-rouge/20"
-                                                }`;
+                                        {contacts.length > 0 ? (
+                                            contacts.map((contact, index) => {
+                                                const className = `py-5 px-6 transition-all duration-200 hover:bg-gradient-to-r hover:from-blackcore-rouge/5 hover:via-blackcore-magenta/5 hover:to-cyan-500/5 ${index === contacts.length - 1 ? "" : "border-b border-blackcore-rouge/20"
+                                                    }`;
 
                                                 // Bordure colorée selon le statut du profil
                                                 const borderLeftColor = contact.profil === "GARDE" ? "border-l-4 border-l-green-400" :
-                                                                       contact.profil === "REJETE" ? "border-l-4 border-l-red-500" :
-                                                                       contact.profil === "En attente" ? "border-l-4 border-l-orange-500" :
-                                                                       "border-l-4 border-l-gray-500";
+                                                    contact.profil === "REJETE" ? "border-l-4 border-l-red-500" :
+                                                        contact.profil === "En attente" ? "border-l-4 border-l-orange-500" :
+                                                            "border-l-4 border-l-gray-500";
 
                                                 return (
                                                     <tr key={contact.id || index} className={`hover:bg-gradient-to-r hover:from-blackcore-rouge/5 hover:via-blackcore-magenta/5 hover:to-cyan-500/5 cursor-pointer transition-all duration-500 group relative overflow-hidden ${borderLeftColor}`}>
@@ -909,9 +893,9 @@ export function CampaignContactsInterface() {
                                                                         {getProfileIcon(contact.profil)}
                                                                         <span className="font-orbitron text-xs tracking-wider">
                                                                             {contact.profil === "GARDE" ? "GARDÉ" :
-                                                                             contact.profil === "REJETE" ? "REJETÉ" :
-                                                                             contact.profil === "En attente" ? "ATTENTE" :
-                                                                             "NON QUALIFIÉ"}
+                                                                                contact.profil === "REJETE" ? "REJETÉ" :
+                                                                                    contact.profil === "En attente" ? "ATTENTE" :
+                                                                                        "NON QUALIFIÉ"}
                                                                         </span>
                                                                     </div>
                                                                 }
@@ -922,11 +906,11 @@ export function CampaignContactsInterface() {
                                                             <div className="flex items-center space-x-2">
                                                                 <div className="w-1 h-1 bg-blue-500 rounded-full opacity-50"></div>
                                                                 <Typography className="text-xs text-blackcore-blanc/70 font-mono">
-                                                                    {contact.dateMessage ? 
-                                                                        new Date(contact.dateMessage).toLocaleDateString('fr-FR') : 
-                                                                        contact.dateCreation ? 
-                                                                        new Date(contact.dateCreation).toLocaleDateString('fr-FR') :
-                                                                        'N/A'
+                                                                    {contact.dateMessage ?
+                                                                        new Date(contact.dateMessage).toLocaleDateString('fr-FR') :
+                                                                        contact.dateCreation ?
+                                                                            new Date(contact.dateCreation).toLocaleDateString('fr-FR') :
+                                                                            'N/A'
                                                                     }
                                                                 </Typography>
                                                             </div>
@@ -986,16 +970,16 @@ export function CampaignContactsInterface() {
                                                                             className="text-cyan-400 hover:bg-cyan-400/10 transition-colors border border-cyan-400/30 hover:border-cyan-400/60"
                                                                         >
                                                                             <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
-                                                                                <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+                                                                                <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
                                                                             </svg>
                                                                         </IconButton>
                                                                     </Tooltip>
                                                                 )}
                                                                 <Menu>
                                                                     <MenuHandler>
-                                                                        <IconButton 
-                                                                            variant="text" 
-                                                                            size="sm" 
+                                                                        <IconButton
+                                                                            variant="text"
+                                                                            size="sm"
                                                                             className="text-blackcore-blanc/60 hover:bg-blackcore-rouge/10 transition-colors border border-blackcore-rouge/30 hover:border-blackcore-rouge/60"
                                                                         >
                                                                             <EllipsisVerticalIcon className="h-4 w-4" />
@@ -1056,7 +1040,7 @@ export function CampaignContactsInterface() {
                                                                 Aucun contact détecté
                                                             </Typography>
                                                             <Typography variant="small" className="text-blackcore-blanc/50 font-poppins">
-                                                                {statusFilter || profileFilter || search ? 
+                                                                {statusFilter || profileFilter || search ?
                                                                     "Aucun contact ne correspond aux critères de recherche" :
                                                                     "Aucun contact associé à cette campagne"
                                                                 }
@@ -1174,7 +1158,7 @@ export function CampaignContactsInterface() {
                                                         Affichés
                                                     </Typography>
                                                     <Typography className="text-lg font-bold text-cyan-400 font-mono">
-                                                        {filteredContacts.length}/{limit}
+                                                        {contacts.length}/{limit}
                                                     </Typography>
                                                 </div>
                                                 <div className="absolute top-2 right-2 w-2 h-2 bg-cyan-400 rounded-full animate-pulse"></div>
@@ -1236,8 +1220,8 @@ export function CampaignContactsInterface() {
             </div>
 
             {/* Dialog détails du contact - Style futuriste */}
-            <Dialog 
-                open={contactDetailsOpen} 
+            <Dialog
+                open={contactDetailsOpen}
                 handler={() => setContactDetailsOpen(false)}
                 size="lg"
                 className="max-h-[90vh] overflow-y-auto bg-blackcore-gris border border-blackcore-rouge/30"
@@ -1282,9 +1266,9 @@ export function CampaignContactsInterface() {
                                             {getProfileIcon(selectedContact?.profil)}
                                             <span className="font-orbitron text-xs tracking-wider">
                                                 {selectedContact?.profil === "GARDE" ? "PROFIL GARDÉ" :
-                                                 selectedContact?.profil === "REJETE" ? "PROFIL REJETÉ" :
-                                                 selectedContact?.profil === "En attente" ? "EN ATTENTE" :
-                                                 "NON QUALIFIÉ"}
+                                                    selectedContact?.profil === "REJETE" ? "PROFIL REJETÉ" :
+                                                        selectedContact?.profil === "En attente" ? "EN ATTENTE" :
+                                                            "NON QUALIFIÉ"}
                                             </span>
                                         </div>
                                     }
@@ -1301,7 +1285,7 @@ export function CampaignContactsInterface() {
                         <XMarkIcon className="h-5 w-5" />
                     </IconButton>
                 </DialogHeader>
-                
+
                 <DialogBody className="p-6 bg-blackcore-gris text-blackcore-blanc">
                     {selectedContact && (
                         <div className="space-y-6">
@@ -1414,7 +1398,7 @@ export function CampaignContactsInterface() {
                                             <Typography variant="small" className="text-blackcore-blanc/60 font-orbitron uppercase tracking-wider">
                                                 Profil LinkedIn
                                             </Typography>
-                                            <a 
+                                            <a
                                                 href={selectedContact.url}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
@@ -1462,7 +1446,7 @@ export function CampaignContactsInterface() {
                         </div>
                     )}
                 </DialogBody>
-                
+
                 <DialogFooter className="border-t border-blackcore-rouge/30 pt-4 bg-gradient-to-r from-blackcore-noir via-slate-900 to-blackcore-noir">
                     <div className="flex justify-between w-full">
                         <div className="flex gap-2">
@@ -1511,8 +1495,8 @@ export function CampaignContactsInterface() {
             </Dialog>
 
             {/* Dialog de confirmation de suppression - Style futuriste */}
-            <Dialog 
-                open={deleteDialogOpen} 
+            <Dialog
+                open={deleteDialogOpen}
                 handler={() => setDeleteDialogOpen(false)}
                 size="sm"
                 className="bg-blackcore-gris border border-red-500/50"
@@ -1527,7 +1511,7 @@ export function CampaignContactsInterface() {
                         </div>
                         <div>
                             <Typography className="font-poppins">
-                                Êtes-vous sûr de vouloir supprimer le contact <strong className="text-red-400">{selectedContact?.nom}</strong> ? 
+                                Êtes-vous sûr de vouloir supprimer le contact <strong className="text-red-400">{selectedContact?.nom}</strong> ?
                             </Typography>
                             <Typography variant="small" className="text-blackcore-blanc/70 mt-2 font-poppins">
                                 Cette action est irréversible.
@@ -1552,7 +1536,7 @@ export function CampaignContactsInterface() {
                 </DialogFooter>
             </Dialog>
 
-            <ToastContainer 
+            <ToastContainer
                 position="bottom-right"
                 theme="dark"
                 toastStyle={{

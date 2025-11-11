@@ -28,8 +28,17 @@ export const createContact = async (contactData) => {
 // Récupérer tous les contacts avec pagination et filtres
 export const getContacts = async (params = {}) => {
   try {
-    const response = await apiClient.get(CONTACTS_ENDPOINT, { params });
-    return response.data;
+    // Nettoyer les paramètres vides
+    const cleanParams = Object.fromEntries(
+      Object.entries(params).filter(([_, value]) => value !== '' && value !== null && value !== undefined)
+    );
+
+    const response = await apiClient.get(`${CONTACTS_ENDPOINT}/user`, {
+      params: cleanParams
+    });
+
+    console.log(response);
+    return response.data.result;
   } catch (error) {
     console.error('Erreur lors de la récupération des contacts:', error);
     throw error;
@@ -235,6 +244,8 @@ export const createMultipleContacts = async (contactsData) => {
 export const getContactsByCampaignId = async (campaignId, params = {}) => {
   try {
     const response = await apiClient.get(`${CONTACTS_ENDPOINT}/campaigns/${campaignId}/details`, { params });
+    console.log(response);
+    
     return response.data;
   } catch (error) {
     console.error('Erreur lors de la récupération des contacts par campagne:', error);
@@ -249,7 +260,7 @@ export const exportContactsToCSV = async (params = {}) => {
       params,
       responseType: 'blob'
     });
-    
+
     // Créer un lien de téléchargement
     const url = window.URL.createObjectURL(new Blob([response.data]));
     const link = document.createElement('a');
@@ -258,7 +269,7 @@ export const exportContactsToCSV = async (params = {}) => {
     document.body.appendChild(link);
     link.click();
     link.remove();
-    
+
     return {
       success: true,
       message: 'Export CSV réussi'
@@ -277,13 +288,13 @@ export const importContactsFromCSV = async (file, campaignId = null) => {
     if (campaignId) {
       formData.append('campaignId', campaignId);
     }
-    
+
     const response = await apiClient.post(`${CONTACTS_ENDPOINT}/import/csv`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
       }
     });
-    
+
     return {
       success: true,
       message: `${response.data.count} contacts importés avec succès`,

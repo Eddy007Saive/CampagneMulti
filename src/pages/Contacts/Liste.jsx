@@ -69,8 +69,8 @@ export function listeContacts() {
     const [statusFilter, setStatusFilter] = useState("");
     const [profileFilter, setProfileFilter] = useState("");
     const [limit, setLimit] = useState(10);
-    const [sortBy, setSortBy] = useState("nom");
-    const [sortOrder, setSortOrder] = useState("ASC");
+    const [sortBy, setSortBy] = useState("Nom");
+    const [sortOrder, setSortOrder] = useState("asc");
 
     const truncateMessage = (message, maxLength = 100) => {
         if (!message) return "Aucun message personnalisé";
@@ -90,11 +90,8 @@ export function listeContacts() {
         { value: "", label: "Tous les statuts" },
         { value: "Non contacté", label: "Non contacté" },
         { value: "Message envoyé", label: "Message envoyé" },
-        { value: "Réponse reçue", label: "Réponse reçue" },
-        { value: "Intéressé", label: "Intéressé" },
-        { value: "Non intéressé", label: "Non intéressé" },
-        { value: "À relancer", label: "À relancer" },
-        { value: "Rendez-vous pris", label: "Rendez-vous pris" },
+        { value: "Répondu", label: "Réponse reçue" },
+        { value: "À recontacter", label: "À recontacter" },
     ];
 
     // Options de profil
@@ -121,44 +118,33 @@ export function listeContacts() {
         }
     }, [user,currentPage, limit, sortBy, sortOrder, statusFilter, profileFilter, search]);
 
-    useEffect(() => {
-        applyFiltersAndPagination();
-    }, [contacts, currentPage, limit]);
-
+   
     const fetchData = async () => {
-        try {
-            setLoading(true);
-            const response = await getContacts({userId:user,
-                page: currentPage,
-                limit,
-                search,
-                sortBy,
-                sortOrder,
-                statusFilter,
-                profileFilter
-            });
-
-            setContacts(response.data.contacts || []);
-            setTotalItems(response.data.totalItems || 0);
-            setTotalPages(response.data.totalPages || 0);
-        } catch (error) {
-            console.error("Erreur lors du chargement des contacts:", error);
-            setContacts([]);
-            setTotalItems(0);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const applyFiltersAndPagination = () => {
-        const totalPages = Math.ceil(totalItems / limit);
-        const startIndex = (currentPage - 1) * limit;
-        const endIndex = startIndex + limit;
-        const paginatedContacts = contacts.slice(startIndex, endIndex);
-
-        setFilteredContacts(paginatedContacts);
-        setTotalPages(totalPages);
-    };
+    try {
+        setLoading(true);
+        const response = await getContacts({
+            userId: user,
+            page: currentPage,
+            limit,
+            search,
+            sortBy,
+            sortOrder,
+            statusFilter,
+            profileFilter
+        });
+        
+        setContacts(response.data || []);
+        setTotalItems(response.pagination?.totalRecords || 0);
+        setTotalPages(response.pagination?.totalPages || 0);
+    } catch (error) {
+        console.error("Erreur lors du chargement des contacts:", error);
+        setContacts([]);
+        setTotalItems(0);
+        setTotalPages(0);
+    } finally {
+        setLoading(false);
+    }
+};
 
     const handleSearch = (e) => {
         e.preventDefault();
@@ -177,10 +163,10 @@ export function listeContacts() {
 
     const handleSort = (column) => {
         if (sortBy === column) {
-            setSortOrder(sortOrder === "ASC" ? "DESC" : "ASC");
+            setSortOrder(sortOrder === "asc" ? "desc" : "asc");
         } else {
             setSortBy(column);
-            setSortOrder("ASC");
+            setSortOrder("asc");
         }
         setCurrentPage(1);
     };
@@ -305,14 +291,13 @@ export function listeContacts() {
 
     const columns = [
         { key: "nom", label: "Contact" },
-        { key: "localisation", label: "Localisation" },
-        { key: "entrepriseActuelle", label: "Entreprise" },
         { key: "secteurs", label: "Secteurs" },
+        { key: "entrepriseActuelle", label: "Entreprise" },
+        { key: "localisation", label: "Localisation" },
         { key: "statut", label: "Statut" },
         { key: "profil", label: "Profil" },
-        { key: "nomCampagne", label: "Campagne" },
+        // { key: "nomCampagne", label: "Campagne" },
         { key: "dateMessage", label: "Dernier contact" },
-        { key: "quickActions", label: "Qualification" },
         { key: "actions", label: "Actions" }
     ];
 
@@ -595,7 +580,7 @@ export function listeContacts() {
                                                         </Typography>
                                                         {sortBy === column.key && (
                                                             <span className="ml-1 text-blue-gray-600">
-                                                                {sortOrder === "ASC" ? "↑" : "↓"}
+                                                                {sortOrder === "asc" ? "↑" : "↓"}
                                                             </span>
                                                         )}
                                                     </div>
@@ -749,40 +734,7 @@ export function listeContacts() {
                                                                                                                     </Typography>
                                                                                                                 </div>
                                                                                                             </td>
-                                                                                                            <td className={className}>
-                                                                                                                <div className="flex items-center gap-2">
-                                                                                                                    <Tooltip content="Garder ce profil" className="bg-blackcore-gris border border-green-500/30">
-                                                                                                                        <IconButton
-                                                                                                                            size="sm"
-                                                                                                                            variant="text"
-                                                                                                                            onClick={() => handleProfileUpdate(contact.ID_CONTACT, "GARDE")}
-                                                                                                                            disabled={updatingProfile[contact.ID_CONTACT] || contact.profil === "GARDE"}
-                                                                                                                            className={`transition-all duration-200 border border-green-500/30 hover:border-green-500/60 ${contact.profil === "GARDE" ? "bg-green-500/20 text-green-300" : "text-green-400 hover:bg-green-500/10"}`}
-                                                                                                                        >
-                                                                                                                            {updatingProfile[contact.ID_CONTACT] ? (
-                                                                                                                                <div className="w-3 h-3 border border-green-400 border-t-transparent rounded-full animate-spin" />
-                                                                                                                            ) : (
-                                                                                                                                <CheckIcon className="h-3 w-3" />
-                                                                                                                            )}
-                                                                                                                        </IconButton>
-                                                                                                                    </Tooltip>
-                                                                                                                    <Tooltip content="Rejeter ce profil" className="bg-blackcore-gris border border-red-500/30">
-                                                                                                                        <IconButton
-                                                                                                                            size="sm"
-                                                                                                                            variant="text"
-                                                                                                                            onClick={() => handleProfileUpdate(contact.ID_CONTACT, "REJETE")}
-                                                                                                                            disabled={updatingProfile[contact.ID_CONTACT] || contact.profil === "REJETE"}
-                                                                                                                            className={`transition-all duration-200 border border-red-500/30 hover:border-red-500/60 ${contact.profil === "REJETE" ? "bg-red-500/20 text-red-300" : "text-red-400 hover:bg-red-500/10"}`}
-                                                                                                                        >
-                                                                                                                            {updatingProfile[contact.ID_CONTACT] ? (
-                                                                                                                                <div className="w-3 h-3 border border-red-400 border-t-transparent rounded-full animate-spin" />
-                                                                                                                            ) : (
-                                                                                                                                <XCircleIcon className="h-3 w-3" />
-                                                                                                                            )}
-                                                                                                                        </IconButton>
-                                                                                                                    </Tooltip>
-                                                                                                                </div>
-                                                                                                            </td>
+                                                                                                       
                                                                                                             <td className={className}>
                                                                                                                 <div className="flex items-center gap-2">
                                                                                                                     <Tooltip content="Voir les détails" className="bg-blackcore-gris border border-blue-500/30">

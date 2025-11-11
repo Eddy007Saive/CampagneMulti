@@ -56,8 +56,9 @@ export const getCampagnes = async (params = {}) => {
       ...(search && { search }),
     });
 
-    const response = await apiClient.get(`/campagne/user?${queryParams}`);
-    console.log(response);
+    const response = await apiClient.get(`/campagne/user`, {
+      params: queryParams,
+    });
     
 
     // ✅ Ton backend renvoie : success + result.data + pagination
