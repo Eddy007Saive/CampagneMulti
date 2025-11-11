@@ -20,6 +20,7 @@ import {
   Clock
 } from "lucide-react";
 import { createCampagne } from "@/services/Campagne";
+import { ToastContainer } from "react-toastify";
 
 
 const CampagneSchema = {
@@ -450,6 +451,8 @@ export function Create() {
         "Users":[formData.Users]
       };
 
+      console.log(campagneData);
+      
       const response = await createCampagne(campagneData);
       toastify.success(response.message || "Campagne créée avec succès");
 
@@ -1203,6 +1206,7 @@ export function Create() {
           </div>
         </div>
       </div>
+      <ToastContainer/>
     </div>
   )
 };

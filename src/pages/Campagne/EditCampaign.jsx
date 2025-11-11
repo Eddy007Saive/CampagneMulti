@@ -25,6 +25,7 @@ import {
 import { CampagneSchema } from "@/validations/CampagneSchema";
 import { getCampagneById, updateCampagne } from "@/services/Campagne";
 import toastify from "@/utils/toastify";
+import { ToastContainer } from "react-toastify";
 
 export function EditCampaign() {
   const { id } = useParams();
@@ -479,7 +480,14 @@ export function EditCampaign() {
       };
 
       const response = await updateCampagne(id, updateData);
-      toastify.success(response.message || "Campagne mise à jour avec succès");
+      if (response.success) {
+        
+        toastify.success("Campagne mise à jour avec succès");
+      }else{
+        toastify.error("Une erreur s'est produite lors de la mise à jour");
+
+      }
+
 
       // Rediriger vers les détails de la campagne
       navigate(`/dashboard/campagne/${id}`);
@@ -1198,6 +1206,7 @@ export function EditCampaign() {
                 </div>
               </div>
             </FormProvider>
+            <ToastContainer/>
           </div>
         </div>
       </div>

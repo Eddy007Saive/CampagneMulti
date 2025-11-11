@@ -470,9 +470,8 @@ export function CampaignDetailDashboard() {
   const handleLaunchCampaign = async () => {
     try {
       setLaunchingCampaign(true);
-      await lancerCampagne(campaignId);
+      await updateCampagneStatus(campaignId,"Actif");
       toastify.success('Campagne lancée avec succès !');
-
       const campaignResponse = await getCampagneById(campaignId);
       setCampaignData(campaignResponse.data);
     } catch (error) {

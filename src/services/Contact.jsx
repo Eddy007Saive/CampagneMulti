@@ -1,27 +1,13 @@
-import axios from 'axios';
+import apiClient from "@/utils/ApiClient";
 
-// Configuration Airtable
-const AIRTABLE_BASE_ID = import.meta.env.VITE_APP_AIRTABLE_BASE_ID || 'your_base_id';
-const AIRTABLE_TABLE_NAME = import.meta.env.VITE_APP_AIRTABLE_CONTACT_TABLE_NAME || 'Contacts';
-const AIRTABLE_API_KEY = import.meta.env.VITE_APP_AIRTABLE_API_KEY || 'your_api_key';
-const AIRTABLE_CAMPAIGNS_TABLE='Campagnes'
 
-const airtableClient = axios.create({
-  baseURL: `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}`,
-  headers: {
-    'Authorization': `Bearer ${AIRTABLE_API_KEY}`,
-    'Content-Type': 'application/json',
-  },
-});
+const CONTACTS_ENDPOINT = '/contact';
+
 
 // Créer un nouveau contact
 export const createContact = async (contactData) => {
   try {
-    console.log(contactData)
-    const response = await airtableClient.post(`/${AIRTABLE_TABLE_NAME}`, {
-      fields: contactData
-    });
-
+    const response = await apiClient.post(CONTACTS_ENDPOINT, contactData);
     return {
       success: true,
       message: 'Contact créé avec succès',
@@ -32,7 +18,7 @@ export const createContact = async (contactData) => {
     throw {
       response: {
         data: {
-          errors: error.response?.data?.error?.message || 'Erreur lors de la création du contact'
+          errors: error.response?.data?.error || error.response?.data?.message || 'Erreur lors de la création du contact'
         }
       }
     };
@@ -42,214 +28,42 @@ export const createContact = async (contactData) => {
 // Récupérer tous les contacts avec pagination et filtres
 export const getContacts = async (params = {}) => {
   try {
-    const {
-      page = 1,
-      limit = 10,
-      search = '',
-      sortBy = '',
-      sortOrder = 'DESC',
-      statut = '',
-      campagne = '',
-      profil = '',
-      userId=null
-    } = params;
-
-    let airtableParams = {
-      pageSize: 100, // Maximum pour Airtable
-      fields: [
-        'ID_CONTACT',
-        'Nom',
-        'Localisation', 
-        'Poste actuel',
-        'Entreprise actuelle',
-        'URL',
-        'Statut',
-        'Campagne',
-        'Nom de la campagne (from Campagne)',
-        'Notes',
-        'Secteurs',
-        'Parcours',
-        'ParcoursEducation',
-        'Message Personnalisé',
-        'connection',
-        'Email',
-        'Téléphone',
-        'Date du message',
-        'Réponse reçue',
-        'Date de réponse',
-        'profilImage',
-        'Profil'  // Nouveau champ ajouté
-      ]
-    };
-
-   
-
-    // Tri - seulement si explicitement demandé et valide
-    if (sortBy && mapFieldName(sortBy)) {
-      const direction = sortOrder === 'DESC' ? 'desc' : 'asc';
-      airtableParams.sort = [{ field: mapFieldName(sortBy), direction }];
-    }
-
-    // Construction des filtres
-    let filters = [];
-
-      // 🔒 Filtrer par utilisateur connecté
-    if (userId) {
-      // Vérifie bien que ton champ s'appelle "user_id" dans Airtable
-      filters.push(`SEARCH("${userId.ID}", ARRAYJOIN({user_id}))`);
-    }
-    
-    // Recherche par nom, email, entreprise, poste
-    if (search) {
-      filters.push(`OR(
-        SEARCH(LOWER("${search}"), LOWER({Nom})),
-        SEARCH(LOWER("${search}"), LOWER({Email })),
-        SEARCH(LOWER("${search}"), LOWER({Entreprise actuelle})),
-        SEARCH(LOWER("${search}"), LOWER({Poste actuel})),
-        SEARCH(LOWER("${search}"), LOWER({Nom de la campagne (from Campagne)}))
-      )`);
-    }
-
-    // Filtre par statut
-    if (statut) {
-      filters.push(`{Statut} = "${statut}"`);
-    }
-
-    // Filtre par profil
-    if (profil) {
-      filters.push(`{Profil} = "${profil}"`);
-    }
-
-    // Filtre par campagne - utiliser le nom de la campagne
-    if (campagne) {
-      filters.push(`{Nom de la campagne (from Campagne)} = "${campagne}"`);
-    }
-
-    // Combiner les filtres
-    if (filters.length > 0) {
-      airtableParams.filterByFormula = filters.length === 1 
-        ? filters[0] 
-        : `AND(${filters.join(', ')})`;
-    }
-
-    
-    const response = await airtableClient.get(`/${AIRTABLE_TABLE_NAME}`, {
-        params: airtableParams
-    });
-
-    console.log("all",response.data.records);    
-    const transformedRecords = response.data.records.map(record => {
-        // Utiliser le champ lookup pour le nom de la campagne
-        const campagneNom = record.fields['Nom de la campagne (from Campagne)'];
-        const campagneId = record.fields['Campagne'];
-        
-      return {
-        id: record.id,
-        ID_CONTACT: record.fields['ID_CONTACT'] ,
-        image: record.fields['profilImage'] || '',
-        airtableId: record.fields['ID_CONTACT'] || '',
-        nom: record.fields['Nom'] || '',
-        localisation: record.fields['Localisation'] || '',
-        posteActuel: record.fields['Poste actuel'] || '',
-        entrepriseActuelle: record.fields['Entreprise actuelle'] || '',
-        url: record.fields['URL'] || '',
-        statut: record.fields['Statut'] || 'Non contacté',
-        campagne: Array.isArray(campagneNom) ? campagneNom[0] : campagneNom || '',
-        campagneId: Array.isArray(campagneId) ? campagneId[0] : campagneId || '',
-        secteurs: record.fields['Secteurs'] || '',
-        parcours: record.fields['Parcours'] || '',
-        parcoursEducation: record.fields['ParcoursEducation'] || '',
-        messagePersonnalise: record.fields['Message Personnalisé'] || '',
-        connection: record.fields['connection'] || '', // Note: minuscule dans votre CSV
-        email: record.fields['Email'] || '', // Note: espace à la fin dans votre CSV
-        telephone: record.fields['Téléphone'] || '',
-        dateMessage: record.fields['Date du message'] || '',
-        reponseRecue: record.fields['Réponse reçue'] || '',
-        dateReponse: record.fields['Date de réponse'] || '',
-        notes: record.fields['Notes'] || '', // Note: espace à la fin dans votre CSV
-        profil: record.fields['Profil'] || 'En attente' // Nouveau champ
-      };
-    });
-
-    // Simulation de pagination
-    const startIndex = (page - 1) * limit;
-    const endIndex = startIndex + limit;
-    const paginatedRecords = transformedRecords.slice(startIndex, endIndex);
-    const totalItems = transformedRecords.length;
-    const totalPages = Math.ceil(totalItems / limit);
-
-    return {
-      data: {
-        contacts: paginatedRecords,
-        totalItems,
-        totalPages,
-        currentPage: page
-      }
-    };
+    const response = await apiClient.get(CONTACTS_ENDPOINT, { params });
+    return response.data;
   } catch (error) {
     console.error('Erreur lors de la récupération des contacts:', error);
     throw error;
   }
 };
 
-// Récupérer un contact par ID_CONTACT
-export const getContactById = async (ID_CONTACT) => {
+// Récupérer un contact par ID
+export const getContactById = async (id) => {
   try {
-    const response = await airtableClient.get(`/${AIRTABLE_TABLE_NAME}/${ID_CONTACT}`);
-    
-    const record = response.data;
-    const campagneNom = record.fields['Nom de la campagne (from Campagne)'];
-    const campagneId = record.fields['Campagne'];
-    
+    const response = await apiClient.get(`${CONTACTS_ENDPOINT}/${id}`);
     return {
-      data: {
-        ID_CONTACT: record.ID_CONTACT,
-        airtableId: record.fields['ID_CONTACT'] || '',
-        image: record.fields['profilImage'] || '',
-        nom: record.fields['Nom'] || '',
-        localisation: record.fields['Localisation'] || '',
-        posteActuel: record.fields['Poste actuel'] || '',
-        entrepriseActuelle: record.fields['Entreprise actuelle'] || '',
-        url: record.fields['URL'] || '',
-        statut: record.fields['Statut'] || 'Non contacté',
-        campagne: Array.isArray(campagneNom) ? campagneNom[0] : campagneNom || '',
-        campagneId: Array.isArray(campagneId) ? campagneId[0] : campagneId || '',
-        secteurs: record.fields['Secteurs'] || '',
-        parcours: record.fields['Parcours'] || '',
-        parcoursEducation: record.fields['ParcoursEducation'] || '',
-        messagePersonnalise: record.fields['Message Personnalisé'] || '',
-        connection: record.fields['connection'] || '',
-        email: record.fields['Email'] || '',
-        telephone: record.fields['Téléphone'] || '',
-        dateMessage: record.fields['Date du message'] || '',
-        reponseRecue: record.fields['Réponse reçue'] || '',
-        dateReponse: record.fields['Date de réponse'] || '',
-        notes: record.fields['Notes'] || '',
-        profil: record.fields['Profil'] || 'En attente'
-      }
+      data: response.data
     };
   } catch (error) {
+    console.error('Erreur lors de la récupération du contact:', error);
     throw error;
   }
 };
 
 // Mettre à jour un contact
-export const updateContact = async (ID_CONTACT, contactData) => {
+export const updateContact = async (id, contactData) => {
   try {
-    const response = await airtableClient.patch(`/${AIRTABLE_TABLE_NAME}/${ID_CONTACT}`, {
-      fields: contactData
-    });
-
+    const response = await apiClient.put(`${CONTACTS_ENDPOINT}/${id}`, contactData);
     return {
       success: true,
       message: 'Contact mis à jour avec succès',
       data: response.data
     };
   } catch (error) {
+    console.error('Erreur lors de la mise à jour du contact:', error);
     throw {
       response: {
         data: {
-          errors: error.response?.data?.error?.message || 'Erreur lors de la mise à jour du contact'
+          errors: error.response?.data?.error || error.response?.data?.message || 'Erreur lors de la mise à jour du contact'
         }
       }
     };
@@ -257,11 +71,9 @@ export const updateContact = async (ID_CONTACT, contactData) => {
 };
 
 // Supprimer un contact
-export const deleteContact = async (ID_CONTACT) => {
-  
+export const deleteContact = async (id) => {
   try {
-    await airtableClient.delete(`/${AIRTABLE_TABLE_NAME}/${ID_CONTACT}`);
-    
+    await apiClient.delete(`${CONTACTS_ENDPOINT}/${id}`);
     return {
       success: true,
       message: 'Contact supprimé avec succès'
@@ -271,7 +83,7 @@ export const deleteContact = async (ID_CONTACT) => {
     throw {
       response: {
         data: {
-          errors: error.response?.data?.error?.message || 'Erreur lors de la suppression du contact'
+          errors: error.response?.data?.error || error.response?.data?.message || 'Erreur lors de la suppression du contact'
         }
       }
     };
@@ -279,14 +91,9 @@ export const deleteContact = async (ID_CONTACT) => {
 };
 
 // Mettre à jour le statut d'un contact
-export const updateContactStatus = async (ID_CONTACT, statut) => {
+export const updateContactStatus = async (id, statut) => {
   try {
-    const response = await airtableClient.patch(`/${AIRTABLE_TABLE_NAME}/${ID_CONTACT}`, {
-      fields: {
-        'Statut': statut
-      }
-    });
-
+    const response = await apiClient.patch(`${CONTACTS_ENDPOINT}/${id}/status`, { statut });
     return {
       success: true,
       message: 'Statut du contact mis à jour avec succès',
@@ -297,7 +104,7 @@ export const updateContactStatus = async (ID_CONTACT, statut) => {
     throw {
       response: {
         data: {
-          errors: error.response?.data?.error?.message || 'Erreur lors de la mise à jour du statut'
+          errors: error.response?.data?.error || error.response?.data?.message || 'Erreur lors de la mise à jour du statut'
         }
       }
     };
@@ -305,14 +112,9 @@ export const updateContactStatus = async (ID_CONTACT, statut) => {
 };
 
 // Mettre à jour le statut de profil d'un contact
-export const updateContactProfile = async (ID_CONTACT, profil) => {
+export const updateContactProfile = async (id, profil) => {
   try {
-    const response = await airtableClient.patch(`/${AIRTABLE_TABLE_NAME}/${ID_CONTACT}`, {
-      fields: {
-        'Profil': profil
-      }
-    });
-
+    const response = await apiClient.patch(`${CONTACTS_ENDPOINT}/${id}/profile`, { profil });
     return {
       success: true,
       message: 'Profil du contact mis à jour avec succès',
@@ -323,7 +125,7 @@ export const updateContactProfile = async (ID_CONTACT, profil) => {
     throw {
       response: {
         data: {
-          errors: error.response?.data?.error?.message || 'Erreur lors de la mise à jour du profil'
+          errors: error.response?.data?.error || error.response?.data?.message || 'Erreur lors de la mise à jour du profil'
         }
       }
     };
@@ -333,23 +135,13 @@ export const updateContactProfile = async (ID_CONTACT, profil) => {
 // Tri et retri automatique des profils
 export const autoSortProfiles = async (campaignId, criteria = 'auto') => {
   try {
-    const response = await fetch(`https://n8n.srv903010.hstgr.cloud/webhook/trier/profils`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        id: campaignId
-      }),
+    const response = await apiClient.post(`${CONTACTS_ENDPOINT}/campaigns/${campaignId}/auto-sort`, {
+      criteria
     });
-
-    if (!response.ok) {
-      throw new Error(`Erreur HTTP: ${response.status}`);
-    }
-
     return {
       success: true,
-      message: 'Tri automatique des profils lancé avec succès'
+      message: 'Tri automatique des profils lancé avec succès',
+      data: response.data
     };
   } catch (error) {
     console.error('Erreur lors du tri automatique des profils:', error);
@@ -360,23 +152,11 @@ export const autoSortProfiles = async (campaignId, criteria = 'auto') => {
 // Fonction pour faire le tri manuel des profils
 export const manualSortProfiles = async (campaignId) => {
   try {
-    const response = await fetch(`https://n8n.srv903010.hstgr.cloud/webhook/retrier/profils`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        id: campaignId
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Erreur HTTP: ${response.status}`);
-    }
-
+    const response = await apiClient.post(`${CONTACTS_ENDPOINT}/campaigns/${campaignId}/manual-sort`);
     return {
       success: true,
-      message: 'Retri des profils lancé avec succès'
+      message: 'Retri des profils lancé avec succès',
+      data: response.data
     };
   } catch (error) {
     console.error('Erreur lors du retri des profils:', error);
@@ -387,270 +167,43 @@ export const manualSortProfiles = async (campaignId) => {
 // Récupérer tous les contacts avec les noms des campagnes
 export const getContactsWithCampagneNames = async (params = {}) => {
   try {
-    // D'abord récupérer les contacts
-    const contactsResponse = await getContacts(params);
-    
-    // Ensuite récupérer toutes les campagnes pour faire le mapping
-    const { getCampagnes } = await import('./Campagne');
-    const campagnesResponse = await getCampagnes();
-    
-    // Créer un mapping ID_CONTACT -> Nom de campagne
-    const campagneMap = {};
-    if (campagnesResponse.data && campagnesResponse.data.campagnes) {
-      campagnesResponse.data.campagnes.forEach(campagne => {
-        campagneMap[campagne.ID_CONTACT] = campagne.nom;
-      });
-    }
-    
-    // Mettre à jour les contacts avec les noms des campagnes
-    const contactsWithNames = contactsResponse.data.contacts.map(contact => ({
-      ...contact,
-      campagne: campagneMap[contact.campagne] || contact.campagne || ''
-    }));
-    
-    return {
-      data: {
-        ...contactsResponse.data,
-        contacts: contactsWithNames
-      }
-    };
+    const response = await apiClient.get(`${CONTACTS_ENDPOINT}/with-campaign-names`, { params });
+    return response.data;
   } catch (error) {
     console.error('Erreur lors de la récupération des contacts avec noms de campagnes:', error);
     throw error;
   }
 };
 
-export const getContactsByCampagne = async (campagneId, userId) => {
+// Récupérer les contacts par campagne
+export const getContactsByCampagne = async (campagneId, userId = null) => {
   try {
-    let filters = [];
-
-    // 🧩 Filtre par campagne
-    filters.push(`FIND("${campagneId}", ARRAYJOIN({Campagne}))`);
-
-    // 🔒 Filtre par utilisateur connecté
-    if (userId) {
-      filters.push(`SEARCH("${userId}", ARRAYJOIN({user_id}))`);
-    }
-
-    // 🧠 Combine les filtres dans un AND si plusieurs
-    const filterByFormula =
-      filters.length > 1 ? `AND(${filters.join(",")})` : filters[0];
-
-    const airtableParams = {
-      pageSize: 100,
-      filterByFormula,
-    };
-
-    // 🚀 Requête API
-    const response = await airtableClient.get(`/${AIRTABLE_TABLE_NAME}`, {
-      params: airtableParams,
-    });
-
-    // 🧱 Transformation des enregistrements
-    const transformedRecords = response.data.records.map((record) => ({
-      id: record.id,
-      nom: record.fields["Nom"] || "",
-      email: record.fields["Email"] || "",
-      statut: record.fields["Statut"] || "Non contacté",
-      profil: record.fields["Profil"] || "En attente",
-    }));
-
-    return {
-      data: transformedRecords,
-      count: transformedRecords.length,
-    };
+    const params = userId ? { userId } : {};
+    const response = await apiClient.get(`${CONTACTS_ENDPOINT}/campaigns/${campagneId}`, { params });
+    return response.data;
   } catch (error) {
-    console.error(
-      "Erreur lors de la récupération des contacts par campagne:",
-      error?.response?.data || error
-    );
+    console.error('Erreur lors de la récupération des contacts par campagne:', error);
     throw error;
   }
 };
 
 // Récupérer les statistiques des contacts
-// Récupérer les statistiques des contacts (VERSION CORRIGÉE)
-export const getContactsStats = async () => {
+export const getContactsStats = async (userId = null) => {
   try {
-    let allRecords = [];
-    let offset = '';
-
-    // Récupérer TOUS les contacts avec pagination
-    do {
-      const params = {
-        pageSize: 100, // Maximum pour Airtable
-        fields: ['Statut', 'Profil'], // On ne récupère que les champs nécessaires pour optimiser
-        ...(offset && { offset })
-      };
-
-      const response = await airtableClient.get(`/${AIRTABLE_TABLE_NAME}`, { params });
-      
-      allRecords = [...allRecords, ...response.data.records];
-      offset = response.data.offset;
-    } while (offset);
-
-    // Maintenant on calcule les stats sur TOUS les contacts
-    const stats = {
-      total: allRecords.length,
-      nonContacte: 0,
-      messageEnvoye: 0,
-      reponseRecue: 0,
-      interesse: 0,
-      nonInteresse: 0,
-      aRelancer: 0,
-      // Nouveaux stats pour les profils
-      profilsGardes: 0,
-      profilsRejetes: 0,
-      profilsEnAttente: 0
-    };
-
-    allRecords.forEach(contact => {
-      const statut = contact.fields['Statut'] || 'À contacter';
-      const profil = contact.fields['Profil'] || 'En attente';
-      
-      // Stats par statut
-      switch (statut) {
-        case 'À contacter':
-          stats.nonContacte++;
-          break;
-        case 'Message envoyé':
-          stats.messageEnvoye++;
-          break;
-        case 'Répondu':
-          stats.reponseRecue++;
-          break;
-        case 'Intéressé':
-          stats.interesse++;
-          break;
-        case 'Non intéressé':
-          stats.nonInteresse++;
-          break;
-        case 'À relancer':
-          stats.aRelancer++;
-          break;
-      }
-
-      // Stats par profil
-      switch (profil) {
-        case 'GARDE':
-          stats.profilsGardes++;
-          break;
-        case 'REJETE':
-          stats.profilsRejetes++;
-          break;
-        case 'En attente':
-        default:
-          stats.profilsEnAttente++;
-          break;
-      }
-    });
-
-    console.log(`Statistiques calculées sur ${allRecords.length} contacts`);
-
-    return {
-      data: stats
-    };
+    const params = userId ? { userId } : {};
+    const response = await apiClient.get(`${CONTACTS_ENDPOINT}/stats`, { params });
+    return response.data;
   } catch (error) {
     console.error('Erreur lors de la récupération des statistiques:', error);
     throw error;
   }
 };
 
-// Fonction utilitaire pour mapper les noms de champs
-const mapFieldName = (fieldName) => {
-  const fieldMapping = {
-    'nom': 'Nom',
-    'localisation': 'Localisation',
-    'posteActuel': 'Poste actuel',
-    'entrepriseActuelle': 'Entreprise actuelle',
-    'url': 'URL',
-    'statut': 'Statut',
-    'campagne': 'Nom de la campagne (from Campagne)',
-    'secteurs': 'Secteurs',
-    'email': 'Email',
-    'telephone': 'Téléphone',
-    'dateMessage': 'Date du message',
-    'dateReponse': 'Date de réponse',
-    'connection': 'connection',
-    'notes': 'Notes',
-    'ID_CONTACT': 'ID_CONTACT',
-    'image': 'profilImage',
-    'profil': 'Profil'
-  };
-  
-  return fieldMapping[fieldName] || null;
-};
-
 // Fonction utilitaire pour récupérer tous les contacts (sans pagination)
-export const getAllContacts = async () => {
+export const getAllContacts = async (params = {}) => {
   try {
-    let allRecords = [];
-    let offset = '';
-
-    do {
-      const params = {
-        pageSize: 100, // Maximum pour Airtable
-        fields: [
-          'ID_CONTACT',
-          'Nom',
-          'Localisation',
-          'Poste actuel',
-          'Entreprise actuelle',
-          'URL',
-          'Statut',
-          'Campagne',
-          'Notes',
-          'Secteurs',
-          'Parcours',
-          'ParcoursEducation',
-          'Message Personnalisé',
-          'connection',
-          'Email',
-          'Téléphone',
-          'Date du message',
-          'Réponse reçue',
-          'Date de réponse',
-          'profilImage',
-          'Profil'
-        ],
-        ...(offset && { offset })
-      };
-
-      const response = await airtableClient.get(`/${AIRTABLE_TABLE_NAME}`, { params });
-      
-      allRecords = [...allRecords, ...response.data.records];
-      offset = response.data.offset;
-    } while (offset);
-
-    console.log(allRecords);
-    
-    const transformedRecords = allRecords.map(record => ({
-      ID_CONTACT: record.ID_CONTACT,
-      nom: record.fields['Nom'] || '',
-      image: record.fields['profilImage'] || '',
-      localisation: record.fields['Localisation'] || '',
-      posteActuel: record.fields['Poste actuel'] || '',
-      entrepriseActuelle: record.fields['Entreprise actuelle'] || '',
-      url: record.fields['URL'] || '',
-      statut: record.fields['Statut'] || 'Non contacté',
-      campagne: record.fields['Campagne'] || '',
-      secteurs: record.fields['Secteurs'] || '',
-      parcours: record.fields['Parcours'] || '',
-      parcoursEducation: record.fields['ParcoursEducation'] || '',
-      messagePersonnalise: record.fields['Message Personnalisé'] || '',
-      connection: record.fields['Connection'] || '',
-      email: record.fields['Email'] || '',
-      telephone: record.fields['Téléphone'] || '',
-      dateMessage: record.fields['Date du message'] || '',
-      reponseRecue: record.fields['Réponse reçue'] || '',
-      dateReponse: record.fields['Date de réponse'] || '',
-      notes: record.fields['Notes'] || '',
-      profil: record.fields['Profil'] || 'En attente'
-    }));
-
-    return {
-      data: transformedRecords
-    };
+    const response = await apiClient.get(`${CONTACTS_ENDPOINT}/all`, { params });
+    return response.data;
   } catch (error) {
     console.error('Erreur lors de la récupération de tous les contacts:', error);
     throw error;
@@ -660,35 +213,18 @@ export const getAllContacts = async () => {
 // Fonction pour créer plusieurs contacts en une fois (batch)
 export const createMultipleContacts = async (contactsData) => {
   try {
-    const records = contactsData.map(contact => ({
-      fields: contact
-    }));
-
-    // Airtable limite à 10 enregistrements par requête pour les créations multiples
-    const batches = [];
-    for (let i = 0; i < records.length; i += 10) {
-      batches.push(records.slice(i, i + 10));
-    }
-
-    const results = [];
-    for (const batch of batches) {
-      const response = await airtableClient.post(`/${AIRTABLE_TABLE_NAME}`, {
-        records: batch
-      });
-      results.push(...response.data.records);
-    }
-
+    const response = await apiClient.post(`${CONTACTS_ENDPOINT}/batch`, { contacts: contactsData });
     return {
       success: true,
-      message: `${results.length} contacts créés avec succès`,
-      data: results
+      message: `${response.data.count || contactsData.length} contacts créés avec succès`,
+      data: response.data
     };
   } catch (error) {
     console.error('Erreur lors de la création multiple de contacts:', error);
     throw {
       response: {
         data: {
-          errors: error.response?.data?.error?.message || 'Erreur lors de la création multiple de contacts'
+          errors: error.response?.data?.error || error.response?.data?.message || 'Erreur lors de la création multiple de contacts'
         }
       }
     };
@@ -698,136 +234,130 @@ export const createMultipleContacts = async (contactsData) => {
 // Récupérer tous les contacts d'une campagne spécifique
 export const getContactsByCampaignId = async (campaignId, params = {}) => {
   try {
-    // Étape 1 — Récupérer la campagne pour obtenir l'ID ou autres infos
-    const campaignResponse = await airtableClient.get(`/${AIRTABLE_CAMPAIGNS_TABLE}/${campaignId}`);
-    const campaignRecord = campaignResponse.data;
-
-    // Si le champ qui contient l'ID recherché s'appelle "ID", on le prend ici
-    const campaignRecordId = campaignRecord.fields.ID; 
-
-    const {
-      search = '',
-      statusFilter = '',
-      profileFilter = '',
-      sortBy = 'nom',
-      sortOrder = 'ASC',
-      userId=null
-    } = params;
-
-    // Construire les filtres Airtable
-    let filters = [];
-
-    // Filtre principal par campagne (avec l'ID récupéré)
-    filters.push(`FIND("${campaignRecordId}", ARRAYJOIN({Campagne}))`);
-
-
-    // Filtre de recherche
-    if (search) {
-      filters.push(`OR(
-        SEARCH(LOWER("${search}"), LOWER({Nom})),
-        SEARCH(LOWER("${search}"), LOWER({Email })),
-        SEARCH(LOWER("${search}"), LOWER({Entreprise actuelle})),
-        SEARCH(LOWER("${search}"), LOWER({Poste actuel}))
-      )`);
-    }
-
-    // Filtre par statut
-    if (statusFilter) {
-      filters.push(`{Statut} = "${statusFilter}"`);
-    }
-
-    // Filtre par profil
-    if (profileFilter) {
-      filters.push(`{Profil} = "${profileFilter}"`);
-    }
-
-    let airtableParams = {
-      pageSize: 100,
-      fields: [
-        'ID_CONTACT',
-        'Nom',
-        'Localisation',
-        'Poste actuel',
-        'Entreprise actuelle',
-        'URL',
-        'Statut',
-        'Campagne',
-        'Notes',
-        'Secteurs',
-        'Parcours',
-        'ParcoursEducation',
-        'Message Personnalisé',
-        'connection',
-        'Email',
-        'Téléphone',
-        'Date du message',
-        'Réponse reçue',
-        'Date de réponse',
-        'profilImage',
-        'Profil'
-      ],
-      filterByFormula: filters.length === 1 ? filters[0] : `AND(${filters.join(', ')})`
-    };
-
-    // Tri
-    if (sortBy && mapFieldName(sortBy)) {
-      const direction = sortOrder === 'DESC' ? 'desc' : 'asc';
-      airtableParams.sort = [{ field: mapFieldName(sortBy), direction }];
-    }
-
-    // Récupérer tous les enregistrements
-    let allRecords = [];
-    let offset = '';
-
-    do {
-      if (offset) {
-        airtableParams.offset = offset;
-      }
-
-      const response = await airtableClient.get(`/${AIRTABLE_TABLE_NAME}`, {
-        params: airtableParams
-      });
-
-      allRecords = [...allRecords, ...response.data.records];
-      offset = response.data.offset;
-      delete airtableParams.offset;
-    } while (offset);
-
-    // Transformation
-    const transformedRecords = allRecords.map(record => ({
-      id: record.id,
-      ID_CONTACT: record.fields['ID_CONTACT'] || record.id,
-      image: record.fields['profilImage'] || '',
-      nom: record.fields['Nom'] || '',
-      localisation: record.fields['Localisation'] || '',
-      posteActuel: record.fields['Poste actuel'] || '',
-      entrepriseActuelle: record.fields['Entreprise actuelle'] || '',
-      url: record.fields['URL'] || '',
-      statut: record.fields['Statut'] || 'Non contacté',
-      campagneId: record.fields['Campagne'] || '',
-      secteurs: record.fields['Secteurs'] || '',
-      parcours: record.fields['Parcours'] || '',
-      parcoursEducation: record.fields['ParcoursEducation'] || '',
-      messagePersonnalise: record.fields['Message Personnalisé'] || '',
-      connection: record.fields['connection'] || '',
-      email: record.fields['Email'] || '',
-      telephone: record.fields['Téléphone'] || '',
-      dateMessage: record.fields['Date du message'] || '',
-      reponseRecue: record.fields['Réponse reçue'] || '',
-      dateReponse: record.fields['Date de réponse'] || '',
-      notes: record.fields['Notes'] || '',
-      dateCreation: record.createdTime || '',
-      profil: record.fields['Profil'] || 'En attente'
-    }));
-
-    console.log(transformedRecords);
-
-    return {
-      data: transformedRecords,
-      totalItems: transformedRecords.length
-    };
+    const response = await apiClient.get(`${CONTACTS_ENDPOINT}/campaigns/${campaignId}/details`, { params });
+    return response.data;
   } catch (error) {
     console.error('Erreur lors de la récupération des contacts par campagne:', error);
     throw error;
+  }
+};
+
+// Exporter les contacts au format CSV
+export const exportContactsToCSV = async (params = {}) => {
+  try {
+    const response = await apiClient.get(`${CONTACTS_ENDPOINT}/export/csv`, {
+      params,
+      responseType: 'blob'
+    });
+    
+    // Créer un lien de téléchargement
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `contacts_${Date.now()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    
+    return {
+      success: true,
+      message: 'Export CSV réussi'
+    };
+  } catch (error) {
+    console.error('Erreur lors de l\'export CSV:', error);
+    throw error;
+  }
+};
+
+// Importer des contacts depuis un fichier CSV
+export const importContactsFromCSV = async (file, campaignId = null) => {
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (campaignId) {
+      formData.append('campaignId', campaignId);
+    }
+    
+    const response = await apiClient.post(`${CONTACTS_ENDPOINT}/import/csv`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+    
+    return {
+      success: true,
+      message: `${response.data.count} contacts importés avec succès`,
+      data: response.data
+    };
+  } catch (error) {
+    console.error('Erreur lors de l\'import CSV:', error);
+    throw {
+      response: {
+        data: {
+          errors: error.response?.data?.error || error.response?.data?.message || 'Erreur lors de l\'import CSV'
+        }
+      }
+    };
+  }
+};
+
+// Recherche avancée de contacts
+export const searchContacts = async (searchQuery, filters = {}) => {
+  try {
+    const response = await apiClient.post(`${CONTACTS_ENDPOINT}/search`, {
+      query: searchQuery,
+      filters
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Erreur lors de la recherche de contacts:', error);
+    throw error;
+  }
+};
+
+// Mettre à jour plusieurs contacts en masse
+export const bulkUpdateContacts = async (contactIds, updateData) => {
+  try {
+    const response = await apiClient.patch(`${CONTACTS_ENDPOINT}/bulk-update`, {
+      ids: contactIds,
+      data: updateData
+    });
+    return {
+      success: true,
+      message: `${response.data.count} contacts mis à jour avec succès`,
+      data: response.data
+    };
+  } catch (error) {
+    console.error('Erreur lors de la mise à jour en masse:', error);
+    throw {
+      response: {
+        data: {
+          errors: error.response?.data?.error || error.response?.data?.message || 'Erreur lors de la mise à jour en masse'
+        }
+      }
+    };
+  }
+};
+
+// Supprimer plusieurs contacts en masse
+export const bulkDeleteContacts = async (contactIds) => {
+  try {
+    const response = await apiClient.post(`${CONTACTS_ENDPOINT}/bulk-delete`, {
+      ids: contactIds
+    });
+    return {
+      success: true,
+      message: `${response.data.count} contacts supprimés avec succès`,
+      data: response.data
+    };
+  } catch (error) {
+    console.error('Erreur lors de la suppression en masse:', error);
+    throw {
+      response: {
+        data: {
+          errors: error.response?.data?.error || error.response?.data?.message || 'Erreur lors de la suppression en masse'
+        }
+      }
+    };
   }
 };

@@ -101,8 +101,10 @@ export const getCampagneById = async (id) => {
  */
 export const updateCampagne = async (id, campagneData) => {
   try {
-    const response = await apiClient.patch(`/campagnes/${id}`, campagneData);
-    return response.data;
+    const response = await apiClient.patch(`/campagne/${id}`, campagneData);
+    console.log(response);
+        
+    return response;
   } catch (error) {
     console.error('Erreur lors de la mise à jour de la campagne:', error);
     throw error;
@@ -130,8 +132,10 @@ export const deleteCampagne = async (id) => {
  * @returns {Promise}
  */
 export const lancerCampagne = async (id) => {
+  let campdata={"Statut":"Actif"}
   try {
-    const response = await apiClient.post(`/campagnes/${id}/lancer`);
+    const response = await apiClient.patch(`/campagne/${id}`,campdata);
+    console.log(response);
     return response.data;
   } catch (error) {
     console.error('Erreur lors du lancement de la campagne:', error);
@@ -145,7 +149,7 @@ export const lancerCampagne = async (id) => {
  */
 export const getAllCampagnes = async () => {
   try {
-    const response = await apiClient.get('/campagnes/user', {
+    const response = await apiClient.get('/campagne/user', {
       params: { limit: 10000 }
     });
     
@@ -166,7 +170,7 @@ export const getAllCampagnes = async () => {
  */
 export const updateCampagneStatus = async (id, statut) => {
   try {
-    const response = await apiClient.patch(`/campagnes/${id}`, {
+    const response = await apiClient.patch(`/campagne/${id}`, {
       statut: statut
     });
     return response.data;
