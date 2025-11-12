@@ -153,9 +153,8 @@ export const getAllCampagnes = async () => {
     const response = await apiClient.get('/campagne/user', {
       params: { limit: 10000 }
     });
-    
     return {
-      data: response.data.data || []
+      data: response.data.result.data || []
     };
   } catch (error) {
     console.error('Erreur lors de la récupération de toutes les campagnes:', error);

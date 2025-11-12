@@ -201,7 +201,8 @@ export const getContactsStats = async (userId = null) => {
   try {
     const params = userId ? { userId } : {};
     const response = await apiClient.get(`${CONTACTS_ENDPOINT}/stats`, { params });
-    return response.data;
+    console.log(response);
+    return response.data.data;
   } catch (error) {
     console.error('Erreur lors de la récupération des statistiques:', error);
     throw error;
@@ -211,7 +212,7 @@ export const getContactsStats = async (userId = null) => {
 // Fonction utilitaire pour récupérer tous les contacts (sans pagination)
 export const getAllContacts = async (params = {}) => {
   try {
-    const response = await apiClient.get(`${CONTACTS_ENDPOINT}/all`, { params });
+    const response = await apiClient.get(`${CONTACTS_ENDPOINT}/user`, { params });
     return response.data;
   } catch (error) {
     console.error('Erreur lors de la récupération de tous les contacts:', error);

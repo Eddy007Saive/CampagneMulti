@@ -26,18 +26,18 @@ export function SignIn() {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
   // Vérifier les erreurs dans l'URL (de Google)
-  useEffect(() => {
-    const errorParam = searchParams.get('error');
-    if (errorParam) {
-      const errorMessages = {
-        'google_auth_failed': 'Échec de l\'authentification Google',
-        'auth_error': 'Erreur lors de l\'authentification',
-        'no_user': 'Aucun utilisateur trouvé',
-        'token_generation_failed': 'Erreur lors de la génération des tokens'
-      };
-      setErrors({ submit: errorMessages[errorParam] || 'Une erreur est survenue' });
-    }
-  }, [searchParams]);
+  // useEffect(() => {
+  //   const errorParam = searchParams.get('error');
+  //   if (errorParam) {
+  //     const errorMessages = {
+  //       'google_auth_failed': 'Échec de l\'authentification Google',
+  //       'auth_error': 'Erreur lors de l\'authentification',
+  //       'no_user': 'Aucun utilisateur trouvé',
+  //       'token_generation_failed': 'Erreur lors de la génération des tokens'
+  //     };
+  //     setErrors({ submit: errorMessages[errorParam] || 'Une erreur est survenue' });
+  //   }
+  // }, [searchParams]);
 
   // Gérer les changements de champs
   const handleChange = (e) => {
@@ -104,7 +104,7 @@ export function SignIn() {
   };
 
   // Gérer la connexion avec Google
-  // Gérer la connexion avec Google
+// Gérer la connexion avec Google
   const handleGoogleLogin = async () => {
     setIsGoogleLoading(true);
     setErrors({});
@@ -122,48 +122,83 @@ export function SignIn() {
         `width=${width},height=${height},left=${left},top=${top}`
       );
 
+      if (!popup) {
+        setErrors({ submit: 'Impossible d\'ouvrir la fenêtre de connexion. Veuillez autoriser les popups.' });
+        setIsGoogleLoading(false);
+        return;
+      }
+
+      let isProcessing = false;
+      let checkInterval = null;
+
       // Écouter les messages de la popup
       const handleMessage = async (event) => {
-        // Vérifier l'origine du FRONTEND
+        
+           // Vérifier que le message vient du backend OU du frontend
+        const backendUrl = import.meta.env.VITE_BASE_URL;
+        const backendOrigin = new URL(backendUrl).origin;
         const allowedOrigins = [
-          'http://localhost:5173',
+          backendOrigin,
           window.location.origin
         ];
+        
+        console.log('Message reçu depuis:', event.origin);
+        console.log('Origines autorisées:', allowedOrigins);
+        console.log('Data:', event.data);
 
+        // Accepter les messages du backend OU du frontend
         if (!allowedOrigins.includes(event.origin)) {
-          console.warn('Message reçu depuis une origine non autorisée:', event.origin);
+          console.warn('Message ignoré - origine non autorisée:', event.origin);
           return;
         }
 
-        console.log('Message reçu:', event.data);
+        isProcessing = true;
+        
+        // Arrêter la vérification de fermeture
+        if (checkInterval) {
+          clearInterval(checkInterval);
+        }
 
         const { success, data, error } = event.data;
 
         if (success && data) {
-          // 👉 Utiliser la méthode loginWithGoogle du contexte
-          const result = await loginWithGoogle(data);
+          try {
+            // 👉 Utiliser la méthode loginWithGoogle du contexte
+            const result = await loginWithGoogle(data);
 
-          // Fermer la popup
-          if (popup && !popup.closed) {
-            popup.close();
-          }
+            // Nettoyer
+            window.removeEventListener('message', handleMessage);
+            
+            // Fermer la popup après traitement
+            setTimeout(() => {
+              if (popup && !popup.closed) {
+                popup.close();
+              }
+            }, 100);
 
-          // Nettoyer l'event listener
-          window.removeEventListener('message', handleMessage);
-          setIsGoogleLoading(false);
+            setIsGoogleLoading(false);
 
-          if (result.success) {
-            // Rediriger vers le dashboard
-            navigate('/dashboard/home');
-          } else {
-            setErrors({ submit: result.error || 'Erreur lors de la connexion' });
+            if (result.success) {
+              // Rediriger vers le dashboard
+              navigate('/dashboard/home');
+            } else {
+              setErrors({ submit: result.error || 'Erreur lors de la connexion' });
+            }
+          } catch (err) {
+            console.error('Erreur lors du traitement:', err);
+            setErrors({ submit: 'Erreur lors de la connexion' });
+            window.removeEventListener('message', handleMessage);
+            if (popup && !popup.closed) {
+              popup.close();
+            }
+            setIsGoogleLoading(false);
           }
         } else {
           setErrors({ submit: error || 'Échec de l\'authentification Google' });
+          window.removeEventListener('message', handleMessage);
           if (popup && !popup.closed) {
             popup.close();
           }
-          window.removeEventListener('message', handleMessage);
           setIsGoogleLoading(false);
         }
       };
@@ -171,15 +206,12 @@ export function SignIn() {
       window.addEventListener('message', handleMessage);
 
       // Vérifier si la popup a été fermée manuellement
-      const checkPopupClosed = setInterval(() => {
-        if (popup && popup.closed) {
-          clearInterval(checkPopupClosed);
+      checkInterval = setInterval(() => {
+        if (popup && popup.closed && !isProcessing) {
+          clearInterval(checkInterval);
           window.removeEventListener('message', handleMessage);
           setIsGoogleLoading(false);
-
-          if (isGoogleLoading) {
-            setErrors({ submit: 'Connexion annulée' });
-          }
+          setErrors({ submit: 'Connexion annulée' });
         }
       }, 500);
 
@@ -331,16 +363,6 @@ export function SignIn() {
                 </defs>
               </svg>
               <span>{isGoogleLoading ? 'Connexion...' : 'Se connecter avec Google'}</span>
-            </Button>
-
-            <Button
-              type="button"
-              size="lg"
-              className="flex items-center gap-2 justify-center shadow-md bg-bleu-fonce/50 border border-secondary-500/30 hover:border-violet-plasma text-blanc-pur hover:shadow-neon-violet transition-all duration-300"
-              fullWidth
-            >
-              <img src="/img/twitter-logo.svg" height={24} width={24} alt="" />
-              <span>Se connecter avec Twitter</span>
             </Button>
           </div>
 

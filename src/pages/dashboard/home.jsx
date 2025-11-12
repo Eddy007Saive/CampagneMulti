@@ -74,16 +74,17 @@ export function Home() {
         
         // Charger les campagnes
         const campaignsResponse = await getAllCampagnes();
+        
         setCampaignsData(campaignsResponse.data || []);
 
         // Charger les contacts
         const contactsResponse = await getAllContacts();
-        setContactsData(contactsResponse.data || []);
+        
+        setContactsData(contactsResponse.result.data || []);
 
         // Charger les statistiques des contacts
         const statsResponse = await getContactsStats();
-        setContactsStats(statsResponse.data || {});
-        console.log("sdsddsd",statsResponse);
+        setContactsStats(statsResponse || {});
         
       } catch (err) {
         console.error('Erreur lors du chargement des données:', err);
@@ -172,6 +173,7 @@ export function Home() {
   const totalCampaigns = campaignsData.length;
   const activeCampaigns = campaignsData.filter(c => c.statut === "Actif").length;
   const totalContacts = contactsData.length;
+  console.log(contactsData);
   const messagesSent = contactsStats?.messageEnvoye || 0;
   const responsesReceived = contactsStats?.reponseRecue || 0;
   // Calcul correct du taux de réponse : Réponses reçues / Messages envoyés
