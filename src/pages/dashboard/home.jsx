@@ -390,14 +390,7 @@ export function Home() {
   return (
     <div className="min-h-screen bg-gradient-background p-6">
       <div className="max-w-7xl mx-auto">
-        {/* En-tête futuriste */}
-        <div className="mb-8 text-center">
-          <Typography className="text-4xl font-bold bg-gradient-primary bg-clip-text text-transparent animate-glow mb-2">
-            PROSPECTRA LEADS
-          </Typography>
     
-        </div>
-
         {/* Cartes de statistiques */}
         <div className="mb-8 grid gap-6 md:grid-cols-2 xl:grid-cols-4">
           {statisticsCards.map((props, index) => (
