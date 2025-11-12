@@ -1,27 +1,39 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { getUnreadNotificationsCount } from "@/services/Notification"; // Ajustez le chemin
+import { getUnreadNotificationsCount } from "@/services/Notification";
+import { useAuth } from "@/context/AuthContext"; // 👈 Importer le hook d'authentification
 
 // Context pour partager l'état des notifications dans toute l'app
 export const NotificationContext = React.createContext();
 
 export const NotificationProvider = ({ children }) => {
+  const { user, isAuthenticated } = useAuth(); // 👈 Récupérer l'état d'authentification
   const [unreadCount, setUnreadCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const intervalRef = useRef(null);
   const isDocumentVisible = useRef(true);
 
   // Fonction pour récupérer le compteur
-const fetchUnreadCount = useCallback(async () => {
-  try {
-    const response = await getUnreadNotificationsCount();
-    const newCount = response?.data?.count ?? 0;
-    setUnreadCount(prev => {
-      return prev !== newCount ? newCount : prev;
-    });
-  } catch (error) {
-    console.error('[fetchUnreadCount] error:', error);
-  }
-}, []);
+  const fetchUnreadCount = useCallback(async () => {
+    // 👉 Ne rien faire si l'utilisateur n'est pas connecté
+    if (!isAuthenticated() || !user) {
+      console.log('[fetchUnreadCount] Utilisateur non connecté, skip');
+      setUnreadCount(0);
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const response = await getUnreadNotificationsCount();
+      const newCount = response?.data?.count ?? 0;
+      setUnreadCount(prev => {
+        return prev !== newCount ? newCount : prev;
+      });
+      setIsLoading(false);
+    } catch (error) {
+      console.error('[fetchUnreadCount] error:', error);
+      setIsLoading(false);
+    }
+  }, [isAuthenticated, user]); // 👈 Ajouter les dépendances
 
   // Fonction pour forcer la mise à jour
   const refreshCount = useCallback(() => {
@@ -30,47 +42,37 @@ const fetchUnreadCount = useCallback(async () => {
 
   // Fonction pour marquer comme lu et rafraîchir
   const markAsReadAndRefresh = useCallback(async (markAsReadFunction) => {
+    if (!isAuthenticated() || !user) {
+      console.log('[markAsReadAndRefresh] Utilisateur non connecté, skip');
+      return;
+    }
+
     try {
       await markAsReadFunction();
-      // Attendre un peu avant de rafraîchir pour laisser le temps à Airtable de se mettre à jour
       setTimeout(() => {
         fetchUnreadCount();
       }, 1000);
     } catch (error) {
       console.error('Erreur lors du marquage comme lu:', error);
     }
-  }, [fetchUnreadCount]);
-
-  // Gestion de la visibilité de la page (pause quand l'onglet n'est pas actif)
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      isDocumentVisible.current = !document.hidden;
-      
-      if (isDocumentVisible.current) {
-        // Rafraîchir immédiatement quand on revient sur l'onglet
-        fetchUnreadCount();
-        // Reprendre le polling
-        startPolling();
-      } else {
-        // Arrêter le polling quand l'onglet n'est pas actif
-        stopPolling();
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [fetchUnreadCount]);
+  }, [fetchUnreadCount, isAuthenticated, user]);
 
   // Fonction pour démarrer le polling
   const startPolling = useCallback(() => {
+    // 👉 Ne démarrer le polling que si connecté
+    if (!isAuthenticated() || !user) {
+      console.log('[startPolling] Utilisateur non connecté, skip');
+      return;
+    }
+
     stopPolling(); // Arrêter l'ancien interval s'il existe
     
     intervalRef.current = setInterval(() => {
       if (isDocumentVisible.current) {
         fetchUnreadCount();
       }
-    }, 15000); // Toutes les 15 secondes (plus fréquent)
-  }, [fetchUnreadCount]);
+    }, 15000); // Toutes les 15 secondes
+  }, [fetchUnreadCount, isAuthenticated, user]);
 
   // Fonction pour arrêter le polling
   const stopPolling = useCallback(() => {
@@ -80,18 +82,51 @@ const fetchUnreadCount = useCallback(async () => {
     }
   }, []);
 
-  // Initialisation
+  // 👉 NOUVEAU : Effet principal qui gère l'abonnement basé sur l'authentification
   useEffect(() => {
+    if (!isAuthenticated() || !user) {
+      console.log('[NotificationProvider] Utilisateur non connecté, nettoyage');
+      stopPolling();
+      setUnreadCount(0);
+      setIsLoading(false);
+      return;
+    }
+
+    console.log('[NotificationProvider] Utilisateur connecté, initialisation');
     fetchUnreadCount(); // Premier chargement
     startPolling(); // Démarrer le polling
 
     // Cleanup
-    return () => stopPolling();
-  }, [fetchUnreadCount, startPolling, stopPolling]);
+    return () => {
+      console.log('[NotificationProvider] Cleanup');
+      stopPolling();
+    };
+  }, [user, isAuthenticated, fetchUnreadCount, startPolling, stopPolling]);
 
-  // Écouter les événements de focus/blur de la fenêtre pour un rafraîchissement immédiat
+  // Gestion de la visibilité de la page
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      isDocumentVisible.current = !document.hidden;
+      
+      // 👉 Ne faire quelque chose que si connecté
+      if (!isAuthenticated() || !user) return;
+      
+      if (isDocumentVisible.current) {
+        fetchUnreadCount();
+        startPolling();
+      } else {
+        stopPolling();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [fetchUnreadCount, startPolling, stopPolling, isAuthenticated, user]);
+
+  // Écouter les événements de focus/blur de la fenêtre
   useEffect(() => {
     const handleFocus = () => {
+      if (!isAuthenticated() || !user) return;
       fetchUnreadCount();
       startPolling();
     };
@@ -107,7 +142,24 @@ const fetchUnreadCount = useCallback(async () => {
       window.removeEventListener('focus', handleFocus);
       window.removeEventListener('blur', handleBlur);
     };
-  }, [fetchUnreadCount, startPolling, stopPolling]);
+  }, [fetchUnreadCount, startPolling, stopPolling, isAuthenticated, user]);
+
+  // Écouter les événements personnalisés de notification
+  useEffect(() => {
+    const onUpdate = (e) => {
+      if (!isAuthenticated() || !user) return;
+      console.log('[Listener déclenché]', e.type);
+      fetchUnreadCount();
+    };
+
+    window.addEventListener('notificationUpdated', onUpdate);
+    window.addEventListener('notificationRead', onUpdate);
+
+    return () => {
+      window.removeEventListener('notificationUpdated', onUpdate);
+      window.removeEventListener('notificationRead', onUpdate);
+    };
+  }, [fetchUnreadCount, isAuthenticated, user]);
 
   const value = {
     unreadCount,
@@ -132,13 +184,21 @@ export const useUnreadNotifications = () => {
   return context;
 };
 
-// Hook alternatif avec WebSocket (optionnel - si vous avez un serveur WebSocket)
+// Hook alternatif avec WebSocket
 export const useWebSocketNotifications = (wsUrl) => {
+  const { user, isAuthenticated } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const wsRef = useRef(null);
 
   useEffect(() => {
+    // 👉 Ne rien faire si non connecté
+    if (!isAuthenticated() || !user) {
+      setUnreadCount(0);
+      setIsLoading(false);
+      return;
+    }
+
     // Récupération initiale
     const fetchInitialCount = async () => {
       try {
@@ -178,7 +238,6 @@ export const useWebSocketNotifications = (wsUrl) => {
 
       wsRef.current.onclose = () => {
         console.log('WebSocket fermé');
-        // Tentative de reconnexion après 5 secondes
         setTimeout(() => {
           if (wsRef.current?.readyState === WebSocket.CLOSED) {
             wsRef.current = new WebSocket(wsUrl);
@@ -192,28 +251,37 @@ export const useWebSocketNotifications = (wsUrl) => {
         wsRef.current.close();
       }
     };
-  }, [wsUrl]);
+  }, [wsUrl, isAuthenticated, user]);
 
   const refreshCount = useCallback(async () => {
+    if (!isAuthenticated() || !user) return;
+    
     try {
       const response = await getUnreadNotificationsCount();
       setUnreadCount(response.data.count);
     } catch (error) {
       console.error('Erreur lors du rafraîchissement:', error);
     }
-  }, []);
+  }, [isAuthenticated, user]);
 
   return { unreadCount, isLoading, refreshCount };
 };
 
-// Hook avec événements personnalisés pour la communication entre composants
+// Hook avec événements personnalisés
 export const useNotificationEvents = () => {
+  const { user, isAuthenticated } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchUnreadCount = useCallback(async () => {
+    if (!isAuthenticated() || !user) {
+      setUnreadCount(0);
+      setIsLoading(false);
+      return;
+    }
+
     try {
-        console.log("fetchUnreadCount called");
+      console.log("fetchUnreadCount called");
       setIsLoading(true);
       const response = await getUnreadNotificationsCount();
       setUnreadCount(response.data.count);
@@ -222,22 +290,7 @@ export const useNotificationEvents = () => {
     } finally {
       setIsLoading(false);
     }
-  }, []);
-
-// ... dans NotificationProvider, après les autres useEffect
-useEffect(() => {
-  const onUpdate = (e) => {
-    console.log('[Listener déclenché]', e.type);
-    fetchUnreadCount();
-  };
-
-  window.addEventListener('notificationUpdated', onUpdate);
-
-  return () => {
-    window.removeEventListener('notificationUpdated', onUpdate);
-  };
-}, [fetchUnreadCount]);
-
+  }, [isAuthenticated, user]);
 
   const refreshCount = useCallback(() => {
     fetchUnreadCount();
@@ -257,7 +310,6 @@ export const emitNotificationEvent = (eventType, detail = {}) => {
 export const markNotificationAsReadWithEvent = async (id, markAsReadFunction) => {
   try {
     await markAsReadFunction(id);
-    // Déclencher l'événement pour mettre à jour le compteur partout
     emitNotificationEvent('notificationRead');
   } catch (error) {
     console.error('Erreur lors du marquage comme lu:', error);

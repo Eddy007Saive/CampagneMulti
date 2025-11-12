@@ -84,7 +84,7 @@ export function liste() {
 
     const columns = [
         { key: "nom", label: "Nom de la campagne" },
-        { key: "poste", label: "Poste recherché" },
+        { key: "poste", label: "Cible recherché" },
         { key: "zone", label: "Zone géographique" },
         { key: "taille_entreprise", label: "Entreprise" },
         { key: "seniorite", label: "Séniorité" },

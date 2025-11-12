@@ -2,8 +2,7 @@ import axios from "axios";
 
 // Configuration de base pour Axios
 const apiClient = axios.create({
-  // baseURL: import.meta.env.REACT_APP_BASE_URL || "http://localhost:3000/api",
-  baseURL: "http://localhost:3000/api",
+  baseURL: `${import.meta.env.VITE_BASE_URL}/api`,
 
   timeout: 30000,
   headers: {

@@ -1,5 +1,5 @@
 // src/pages/auth/SignIn.jsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Input,
   Checkbox,
@@ -7,21 +7,37 @@ import {
   Typography,
   Alert,
 } from "@material-tailwind/react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from '@/context/AuthContext';
 
 export function SignIn() {
   const navigate = useNavigate();
-  const { login, loading, error: authError } = useAuth();
-  
+  const [searchParams] = useSearchParams();
+  const { login, loginWithGoogle, loading, error: authError } = useAuth();
+
   const [formData, setFormData] = useState({
     email: '',
     password: '',
     rememberMe: false,
   });
-  
+
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+
+  // Vérifier les erreurs dans l'URL (de Google)
+  useEffect(() => {
+    const errorParam = searchParams.get('error');
+    if (errorParam) {
+      const errorMessages = {
+        'google_auth_failed': 'Échec de l\'authentification Google',
+        'auth_error': 'Erreur lors de l\'authentification',
+        'no_user': 'Aucun utilisateur trouvé',
+        'token_generation_failed': 'Erreur lors de la génération des tokens'
+      };
+      setErrors({ submit: errorMessages[errorParam] || 'Une erreur est survenue' });
+    }
+  }, [searchParams]);
 
   // Gérer les changements de champs
   const handleChange = (e) => {
@@ -30,7 +46,7 @@ export function SignIn() {
       ...prev,
       [name]: type === 'checkbox' ? checked : value
     }));
-    
+
     // Effacer l'erreur du champ modifié
     if (errors[name]) {
       setErrors(prev => ({
@@ -43,17 +59,17 @@ export function SignIn() {
   // Valider le formulaire
   const validateForm = () => {
     const newErrors = {};
-    
+
     if (!formData.email) {
       newErrors.email = 'L\'email est requis';
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = 'Format d\'email invalide';
     }
-    
+
     if (!formData.password) {
       newErrors.password = 'Le mot de passe est requis';
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -61,19 +77,19 @@ export function SignIn() {
   // Soumettre le formulaire
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
-    
+
     setIsSubmitting(true);
-    
+
     try {
       const result = await login({
         email: formData.email,
         password: formData.password,
       });
-      
+
       if (result.success) {
         // Rediriger vers le dashboard
         navigate('/dashboard/home');
@@ -87,24 +103,111 @@ export function SignIn() {
     }
   };
 
+  // Gérer la connexion avec Google
+  // Gérer la connexion avec Google
+  const handleGoogleLogin = async () => {
+    setIsGoogleLoading(true);
+    setErrors({});
+
+    try {
+      // Ouvrir une popup pour l'authentification Google
+      const width = 500;
+      const height = 600;
+      const left = window.screenX + (window.outerWidth - width) / 2;
+      const top = window.screenY + (window.outerHeight - height) / 2;
+
+      const popup = window.open(
+        `${import.meta.env.VITE_BASE_URL}/google`,
+        'Google Sign In',
+        `width=${width},height=${height},left=${left},top=${top}`
+      );
+
+      // Écouter les messages de la popup
+      const handleMessage = async (event) => {
+        // Vérifier l'origine du FRONTEND
+        const allowedOrigins = [
+          'http://localhost:5173',
+          window.location.origin
+        ];
+
+        if (!allowedOrigins.includes(event.origin)) {
+          console.warn('Message reçu depuis une origine non autorisée:', event.origin);
+          return;
+        }
+
+        console.log('Message reçu:', event.data);
+
+        const { success, data, error } = event.data;
+
+        if (success && data) {
+          // 👉 Utiliser la méthode loginWithGoogle du contexte
+          const result = await loginWithGoogle(data);
+
+          // Fermer la popup
+          if (popup && !popup.closed) {
+            popup.close();
+          }
+
+          // Nettoyer l'event listener
+          window.removeEventListener('message', handleMessage);
+          setIsGoogleLoading(false);
+
+          if (result.success) {
+            // Rediriger vers le dashboard
+            navigate('/dashboard/home');
+          } else {
+            setErrors({ submit: result.error || 'Erreur lors de la connexion' });
+          }
+        } else {
+          setErrors({ submit: error || 'Échec de l\'authentification Google' });
+          if (popup && !popup.closed) {
+            popup.close();
+          }
+          window.removeEventListener('message', handleMessage);
+          setIsGoogleLoading(false);
+        }
+      };
+
+      window.addEventListener('message', handleMessage);
+
+      // Vérifier si la popup a été fermée manuellement
+      const checkPopupClosed = setInterval(() => {
+        if (popup && popup.closed) {
+          clearInterval(checkPopupClosed);
+          window.removeEventListener('message', handleMessage);
+          setIsGoogleLoading(false);
+
+          if (isGoogleLoading) {
+            setErrors({ submit: 'Connexion annulée' });
+          }
+        }
+      }, 500);
+
+    } catch (error) {
+      console.error('Erreur lors de la connexion Google:', error);
+      setErrors({ submit: 'Erreur lors de la connexion avec Google' });
+      setIsGoogleLoading(false);
+    }
+  };
+
   return (
     <section className="m-8 flex gap-4">
       <div className="w-full lg:w-3/5 mt-24">
         <div className="text-center">
-          <Typography 
-            variant="h2" 
+          <Typography
+            variant="h2"
             className="font-bold mb-4 text-transparent bg-clip-text bg-gradient-primary animate-glow"
           >
             Connexion
           </Typography>
-          <Typography 
-            variant="paragraph" 
+          <Typography
+            variant="paragraph"
             className="text-lg font-normal text-gray-300"
           >
             Entrez votre email et mot de passe pour vous connecter.
           </Typography>
         </div>
-        
+
         <form onSubmit={handleSubmit} className="mt-8 mb-2 mx-auto w-80 max-w-screen-lg lg:w-1/2">
           {/* Afficher les erreurs globales */}
           {(errors.submit || authError) && (
@@ -115,8 +218,8 @@ export function SignIn() {
 
           <div className="mb-1 flex flex-col gap-6">
             <div>
-              <Typography 
-                variant="small" 
+              <Typography
+                variant="small"
                 className="-mb-3 font-medium text-bleu-neon"
               >
                 Votre email
@@ -140,10 +243,10 @@ export function SignIn() {
                 </Typography>
               )}
             </div>
-            
+
             <div>
-              <Typography 
-                variant="small" 
+              <Typography
+                variant="small"
                 className="-mb-3 font-medium text-bleu-neon"
               >
                 Mot de passe
@@ -168,7 +271,7 @@ export function SignIn() {
               )}
             </div>
           </div>
-          
+
           <Checkbox
             name="rememberMe"
             checked={formData.rememberMe}
@@ -184,10 +287,10 @@ export function SignIn() {
             containerProps={{ className: "-ml-2.5 mt-4" }}
             className="border-bleu-neon checked:bg-gradient-primary"
           />
-          
-          <Button 
+
+          <Button
             type="submit"
-            className="mt-6 bg-gradient-primary hover:shadow-neon-gradient transition-all duration-300" 
+            className="mt-6 bg-gradient-primary hover:shadow-neon-gradient transition-all duration-300"
             fullWidth
             disabled={isSubmitting || loading}
           >
@@ -195,8 +298,8 @@ export function SignIn() {
           </Button>
 
           <div className="flex items-center justify-between gap-2 mt-6">
-            <Typography 
-              variant="small" 
+            <Typography
+              variant="small"
               className="font-medium text-bleu-neon hover:text-violet-plasma transition-colors"
             >
               <Link to="/auth/forgot-password">
@@ -204,12 +307,14 @@ export function SignIn() {
               </Link>
             </Typography>
           </div>
-          
+
           <div className="space-y-4 mt-8">
-            <Button 
+            <Button
               type="button"
-              size="lg" 
-              className="flex items-center gap-2 justify-center shadow-md bg-bleu-fonce/50 border border-primary-500/30 hover:border-bleu-neon text-blanc-pur hover:shadow-neon-blue transition-all duration-300" 
+              size="lg"
+              onClick={handleGoogleLogin}
+              disabled={isGoogleLoading}
+              className="flex items-center gap-2 justify-center shadow-md bg-bleu-fonce/50 border border-primary-500/30 hover:border-bleu-neon text-blanc-pur hover:shadow-neon-blue transition-all duration-300"
               fullWidth
             >
               <svg width="17" height="16" viewBox="0 0 17 16" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -225,27 +330,27 @@ export function SignIn() {
                   </clipPath>
                 </defs>
               </svg>
-              <span>Se connecter avec Google</span>
+              <span>{isGoogleLoading ? 'Connexion...' : 'Se connecter avec Google'}</span>
             </Button>
-            
-            <Button 
+
+            <Button
               type="button"
-              size="lg" 
-              className="flex items-center gap-2 justify-center shadow-md bg-bleu-fonce/50 border border-secondary-500/30 hover:border-violet-plasma text-blanc-pur hover:shadow-neon-violet transition-all duration-300" 
+              size="lg"
+              className="flex items-center gap-2 justify-center shadow-md bg-bleu-fonce/50 border border-secondary-500/30 hover:border-violet-plasma text-blanc-pur hover:shadow-neon-violet transition-all duration-300"
               fullWidth
             >
               <img src="/img/twitter-logo.svg" height={24} width={24} alt="" />
               <span>Se connecter avec Twitter</span>
             </Button>
           </div>
-          
-          <Typography 
-            variant="paragraph" 
+
+          <Typography
+            variant="paragraph"
             className="text-center font-medium mt-4 text-gray-400"
           >
             Pas encore inscrit ?
-            <Link 
-              to="/auth/sign-up" 
+            <Link
+              to="/auth/sign-up"
               className="text-bleu-neon hover:text-violet-plasma ml-1 transition-colors"
             >
               Créer un compte
@@ -253,16 +358,16 @@ export function SignIn() {
           </Typography>
         </form>
       </div>
-      
+
       <div className="w-2/5 h-full hidden lg:block relative group">
         {/* Effet de lueur derrière l'image */}
         <div className="absolute inset-0 bg-gradient-primary opacity-20 blur-3xl rounded-3xl group-hover:opacity-40 transition-opacity duration-500"></div>
-        
+
         {/* Bordure animée */}
         <div className="absolute inset-0 rounded-3xl bg-gradient-primary opacity-0 group-hover:opacity-100 transition-opacity duration-500 p-[3px]">
           <div className="w-full h-full bg-bleu-fonce rounded-3xl"></div>
         </div>
-        
+
         {/* Image avec effets */}
         <div className="relative h-full overflow-hidden rounded-3xl">
           <img
@@ -272,10 +377,10 @@ export function SignIn() {
               filter: 'brightness(0.9) contrast(1.1)',
             }}
           />
-          
+
           {/* Overlay gradient */}
           <div className="absolute inset-0 bg-gradient-to-tr from-bleu-neon/20 via-transparent to-violet-plasma/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-          
+
           {/* Effet de scan lumineux */}
           <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-bleu-neon to-transparent animate-pulse"></div>

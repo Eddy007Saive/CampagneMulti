@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Authentification Google</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+        }
+        .container {
+            text-align: center;
+            color: white;
+        }
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 4px solid white;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        h2 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 600;
+        }
+        p {
+            margin: 10px 0 0;
+            font-size: 14px;
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="spinner"></div>
+        <h2>Authentification en cours...</h2>
+        <p>Veuillez patienter</p>
+    </div>
+<script>
+    // Récupérer les paramètres de l'URL actuelle
+    const urlParams = new URLSearchParams(window.location.search);
+
+    // Extraire les données
+    const accessToken = urlParams.get('accessToken');
+    const refreshToken = urlParams.get('refreshToken');
+    const userId = urlParams.get('userId');
+    const email = urlParams.get('email');
+    const username = urlParams.get('username');
+    const role = urlParams.get('role');
+    const error = urlParams.get('error');
+
+    // 👉 URL de ton FRONTEND (pas le backend)
+    const FRONTEND_URL = "http://localhost:5173"; // Ton URL React
+
+    // Envoyer les données à la fenêtre parente
+    if (window.opener) {
+        if (error) {
+            window.opener.postMessage({
+                success: false,
+                error: error
+            }, FRONTEND_URL);
+        } else if (accessToken && refreshToken && userId) {
+            window.opener.postMessage({
+                success: true,
+                data: {
+                    accessToken,
+                    refreshToken,
+                    user: {
+                        id: userId,
+                        email: decodeURIComponent(email || ''),
+                        username: decodeURIComponent(username || ''),
+                        role: role || 'user'
+                    }
+                }
+            }, FRONTEND_URL);
+        } else {
+            window.opener.postMessage({
+                success: false,
+                error: 'missing_parameters'
+            }, FRONTEND_URL);
+        }
+
+        // Fermer la popup après un court délai
+        setTimeout(() => {
+            window.close();
+        }, 500);
+    } else {
+        document.querySelector('h2').textContent = 'Erreur';
+        document.querySelector('p').textContent = 'Impossible de communiquer avec la fenêtre parente';
+    }
+</script>
+
+</body>
+</html>

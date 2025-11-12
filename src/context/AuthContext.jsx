@@ -58,6 +58,30 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // 👉 NOUVEAU : Connexion avec Google
+  const loginWithGoogle = async (googleData) => {
+    try {
+      setError(null);
+      setLoading(true);
+      
+      // Stocker les tokens
+      localStorage.setItem('accessToken', googleData.accessToken);
+      localStorage.setItem('refreshToken', googleData.refreshToken);
+      localStorage.setItem('user', JSON.stringify(googleData.user));
+      
+      // Mettre à jour le state
+      setUser(googleData.user);
+      
+      return { success: true, user: googleData.user };
+    } catch (error) {
+      const errorMessage = error.message || 'Erreur lors de la connexion Google';
+      setError(errorMessage);
+      return { success: false, error: errorMessage };
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Inscription
   const register = async (userData) => {
     try {
@@ -136,6 +160,7 @@ export const AuthProvider = ({ children }) => {
     loading,
     error,
     login,
+    loginWithGoogle, // 👈 AJOUTER ICI
     register,
     logout,
     refreshToken,
