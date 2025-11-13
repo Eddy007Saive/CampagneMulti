@@ -25,17 +25,6 @@ export function Auth() {
 
   return (
     <div className="relative min-h-screen w-full">
-      <div className="container mx-auto p-4">
-        <Navbar 
-          brandName="PROSPECTRA LEADS"
-          routes={navbarRoutes}
-          action={
-            <Button variant="gradient">
-              COMMENCER
-            </Button>
-          }
-        />
-      </div>
       
       {/* C'est ici que SignIn et SignUp s'affichent */}
       <Outlet />
