@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Settings, Save, Eye, EyeOff, AlertCircle, CheckCircle, Activity, Mail, Shield, Zap, Globe, Monitor, User } from 'lucide-react';
 import { 
-  updateConfiguration, 
+  upsertConfiguration, 
   getSystemStatus,
+  getConfiguration,
 } from '@/services/Configuration';
 import Loading from '@/components/Loading';
 
@@ -69,39 +70,40 @@ export function LinkedInConfigInterface() {
     setIsLoading(true);
     try {
       const status = await getSystemStatus(currentUser);
-      if (status.success) {
-        setSystemStatus(status.data);
-        
+      
+      if (status) {
+        setSystemStatus(status);
+
         // Charger la configuration
-        if (status.data.configuration) {
+        if (status.configuration) {
           setConfig({
-            liAt: status.data.configuration.valeur || '',
+            liAt: status.configuration.valeur || '',
             email: currentUser.email || '',
-            userAgent: status.data.configuration.userAgent || '',
-            status: status.data.configuration.status || 'Actif',
+            userAgent: status.configuration.userAgent || '',
+            status: status.configuration.status || 'Actif',
             userId: currentUser?.id
           });
         }
         
         // Charger le quota
-        if (status.data.quota) {
-          setQuota(status.data.quota);
+        if (status.quota) {
+          setQuota(status.quota);
         }
         
         // Mettre à jour le statut de validation
-        if (status.data.validation) {
+        if (status.validation) {
           setValidationStatus({
             liAt: {
-              valid: status.data.validation.details?.cookieValid || false,
-              message: status.data.validation.message
+              valid: status.validation.details?.cookieValid || false,
+              message: status.validation.message
             },
             email: {
-              valid: status.data.validation.details?.emailValid || false,
-              message: status.data.validation.details?.emailValid ? 'Email valide' : 'Email invalide'
+              valid: status.validation.details?.emailValid || false,
+              message: status.validation.details?.emailValid ? 'Email valide' : 'Email invalide'
             },
             userAgent: {
-              valid: status.data.validation.details?.userAgentValid || false,
-              message: status.data.validation.details?.userAgentValid ? 'User-Agent valide' : 'User-Agent invalide'
+              valid: status.validation.details?.userAgentValid || false,
+              message: status.validation.details?.userAgentValid ? 'User-Agent valide' : 'User-Agent invalide'
             }
           });
         }
@@ -168,8 +170,7 @@ export function LinkedInConfigInterface() {
         status: config.status,
         userId: config.userId
       };
-
-      const result = await updateConfiguration(configData);
+      const result = await upsertConfiguration(configData);
       
       if (result.success) {
         // Notification de succès moderne
