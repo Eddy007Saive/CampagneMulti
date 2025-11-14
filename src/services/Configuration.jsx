@@ -2,11 +2,7 @@ import apiClient from "@/utils/ApiClient";
 
 const API_URL = "/configuration";
 
-/**
- * =========================
- * CONFIGURATION
- * =========================
- */
+
 
 /**
  * Récupérer la configuration de l'utilisateur courant

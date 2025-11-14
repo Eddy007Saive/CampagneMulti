@@ -36,6 +36,9 @@ export const getCampagnes = async (params = {}) => {
     const response = await apiClient.get(`/campagne/user`, {
       params: queryParams,
     });
+
+    console.log(response);
+    
     
 
     // ✅ Ton backend renvoie : success + result.data + pagination

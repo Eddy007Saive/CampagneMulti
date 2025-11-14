@@ -32,10 +32,10 @@ export function liste() {
     const [sortOrder, setSortOrder] = useState("asc");
 
     useEffect(() => {
-         if (isAuthenticated() && user?.ID) {
+         if (isAuthenticated() && user?.userId) {
             fetchData();
         }
-    }, [user?.ID,currentPage, limit, sortBy, sortOrder]);
+    }, [user?.userId,currentPage, limit, sortBy, sortOrder]);
 
     const fetchData = async () => {
         try {
@@ -47,13 +47,15 @@ export function liste() {
                 sortBy,
                 sortOrder
             });
+            console.log("response",response);
+            
 
             setCampagnes(response.data.campagnes);
             setTotalItems(response.data.totalItems);
             setTotalPages(response.data.totalPages);
             setLoading(false);
         } catch (error) {
-            console.error("Erreur lors du chargement des campagnes:", error);
+            console.log("Erreur lors du chargement des campagnes:", error);
             setLoading(false);
         }
     };
