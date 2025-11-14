@@ -350,11 +350,11 @@ export function CampaignDetailDashboard() {
     try {
       if (!isCurrentlyActive) {
         await runAutomaticSequence();
-        await updateCampganeEnrichissement(campaignId, "En cours");
+        await updateCampagneEnrichissement(campaignId, "En cours");
         toastify.success('Enrichissement automatique activé');
       } else {
         // Arrêter l'enrichissement
-        await updateCampganeEnrichissement(campaignId, "Arrêté");
+        await updateCampagneEnrichissement(campaignId, "Arrêté");
         toastify.success('Enrichissement automatique arrêté');
       }
 
@@ -515,7 +515,7 @@ export function CampaignDetailDashboard() {
   const handleStopEnrichissement = async () => {
     try {
       setstopEnrichissement(true);
-      await updateCampganeEnrichissement(campaignId, "Arrêté");
+      await updateCampagneEnrichissement(campaignId, "Arrêté");
       toastify.success('Enrichissement stoppé !');
 
       const campaignResponse = await getCampagneById(campaignId);

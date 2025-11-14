@@ -171,6 +171,7 @@ export const updateCampagneEnrichissement = async (id, statut) => {
     const response = await apiClient.patch(`/campagne/${id}`, {
       enrichissement: statut
     });
+    
     return response.data;
   } catch (error) {
     console.error('Erreur lors de la mise à jour du statut d\'enrichissement:', error);

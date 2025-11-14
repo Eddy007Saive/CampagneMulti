@@ -170,6 +170,7 @@ export function LinkedInConfigInterface() {
         status: config.status,
         userId: config.userId
       };
+      
       const result = await upsertConfiguration(configData);
       
       if (result.success) {
