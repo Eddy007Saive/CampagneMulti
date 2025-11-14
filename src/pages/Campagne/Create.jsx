@@ -21,6 +21,9 @@ import {
 } from "lucide-react";
 import { createCampagne } from "@/services/Campagne";
 import { ToastContainer } from "react-toastify";
+import 'react-toastify/dist/ReactToastify.css';
+import toastify from "@/utils/toastify";
+import { useNavigate } from 'react-router-dom';
 
 
 const CampagneSchema = {
@@ -40,17 +43,6 @@ const CampagneSchema = {
   InstructionRelance14Jours: { required: true, minLength: 10 }
 };
 
-// Mock functions - remplacez par vos vrais services
-const toastify = {
-  success: (msg) => console.log("Success:", msg),
-  error: (msg) => console.log("Error:", msg)
-};
-
-
-
-
-const useNavigate = () => (path) => console.log("Navigate to:", path);
-
 export function Create() {
   const [darkMode, setDarkMode] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
@@ -59,9 +51,6 @@ export function Create() {
   const [stepValidationErrors, setStepValidationErrors] = useState({});
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState(null);
-
-
-  
 
   const [formData, setFormData] = useState({
     nom: "",
@@ -451,7 +440,6 @@ export function Create() {
         "Users":[formData.Users]
       };
 
-      console.log(campagneData);
       
       const response = await createCampagne(campagneData);
       toastify.success(response.message || "Campagne créée avec succès");
@@ -477,8 +465,12 @@ export function Create() {
       });
       setCurrentStep(0);
       setStepValidationErrors({});
-      navigate(-1);
+
+
       toastify.success("Campagne créée avec succès");
+      setTimeout(() => {
+          navigate(`/dashboard/campagne`);
+        }, 2000);
     } catch (error) {
       toastify.error("Une erreur s'est produite");
     } finally {
@@ -1206,7 +1198,6 @@ export function Create() {
           </div>
         </div>
       </div>
-      <ToastContainer/>
     </div>
   )
 };

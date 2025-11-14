@@ -26,6 +26,7 @@ import { CampagneSchema } from "@/validations/CampagneSchema";
 import { getCampagneById, updateCampagne } from "@/services/Campagne";
 import toastify from "@/utils/toastify";
 import { ToastContainer } from "react-toastify";
+import 'react-toastify/dist/ReactToastify.css';
 
 export function EditCampaign() {
   const { id } = useParams();
@@ -265,8 +266,6 @@ export function EditCampaign() {
         const data = response.data;
         setCampaignData(data);
 
-        console.log("profil", data);
-
 
         // Pré-remplir le formulaire avec les données existantes
         const initialFormData = {
@@ -478,22 +477,18 @@ export function EditCampaign() {
         "InstructionRelance14Jours": formData.InstructionRelance14Jours,
 
       };
-
       const response = await updateCampagne(id, updateData);
-      if (response.success) {
-        
-        toastify.success("Campagne mise à jour avec succès");
-      }else{
-        toastify.error("Une erreur s'est produite lors de la mise à jour");
 
+      if (response.data.success) {
+        toastify.success("Campagne mise à jour avec succès");
+        setTimeout(() => {
+          navigate(`/dashboard/campagne/${id}`);
+        }, 2000);
+      } else {
+        toastify.error("Une erreur s'est produite lors de la mise à jour");
       }
 
-
-      // Rediriger vers les détails de la campagne
-      navigate(`/dashboard/campagne/${id}`);
-
     } catch (error) {
-      console.error("Erreur lors de la mise à jour :", error);
       toastify.error("Une erreur s'est produite lors de la mise à jour");
     } finally {
       setIsSubmitting(false);
@@ -1206,7 +1201,6 @@ export function EditCampaign() {
                 </div>
               </div>
             </FormProvider>
-            <ToastContainer/>
           </div>
         </div>
       </div>
