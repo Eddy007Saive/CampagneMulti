@@ -196,6 +196,22 @@ export const getContactsByCampagne = async (campagneId, userId = null) => {
   }
 };
 
+export const exportContactsSansReponseCSV = async (campagneId) => {
+  try {
+    const response = await apiClient.post(`${CONTACTS_ENDPOINT}/export/sans-reponse`, {
+      id: campagneId
+    }, {
+      responseType: 'text', // Important pour recevoir le texte brut
+    });
+
+    // Le CSV est directement dans response.data
+    return response.data;
+  } catch (error) {
+    console.error('Erreur exportContactsSansReponseCSV:', error);
+    throw error;
+  }
+};
+
 // Récupérer les statistiques des contacts
 export const getContactsStats = async (userId = null) => {
   try {

@@ -49,11 +49,10 @@ import {
   StopIcon,
   MapPinIcon,
   BriefcaseIcon,
+  ArrowDownTrayIcon,
   PauseCircleIcon
 } from "@heroicons/react/24/outline";
 import {
-  LineChart,
-  Line,
   AreaChart,
   Area,
   XAxis,
@@ -70,7 +69,7 @@ import {
 
 // Import des services Airtable
 import { getCampagneById, lancerCampagne, deleteCampagne, updateCampagneStatus, deleteCampagneWithContacts, updateCampagneEnrichissement } from '@/services/Campagne';
-import { getContactsByCampaignId } from '@/services/Contact';
+import { getContactsByCampaignId, exportContactsSansReponseCSV } from '@/services/Contact';
 import { useParams, useNavigate } from "react-router-dom";
 import ModernProgressBar from "@/utils/ModernBar";
 import CompactTimelineProgress from "@/utils/CompactTimelineProgress";
@@ -467,10 +466,61 @@ export function CampaignDetailDashboard() {
     }
   };
 
+  const exportContactsSansReponse = async () => {
+    try {
+      // Appeler le backend pour récupérer le CSV
+      const csvContent = await exportContactsSansReponseCSV(campaignId);
+
+      // Vérifier si on a des données
+      if (!csvContent || csvContent.trim() === '') {
+        toastify.error("Aucun contact sans réponse à exporter");
+        return;
+      }
+
+      // Compter le nombre de lignes (moins l'en-tête)
+      const lines = csvContent.trim().split('\n');
+      const contactCount = lines.length - 1; // -1 pour l'en-tête
+
+      if (contactCount <= 0) {
+        toastify.error("Aucun contact sans réponse à exporter");
+        return;
+      }
+
+      // Créer un Blob avec le contenu CSV (avec BOM UTF-8 pour Excel)
+      const blob = new Blob(['\ufeff' + csvContent], {
+        type: 'text/csv;charset=utf-8;'
+      });
+
+      // Créer le nom de fichier
+      const safeCampaignName = campaignData.nom.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+      const timestamp = new Date().toISOString().split('T')[0];
+      const filename = `contacts_sans_reponse_${safeCampaignName}_${timestamp}.csv`;
+
+      // Créer un lien de téléchargement
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', filename);
+      link.style.visibility = 'hidden';
+
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // Libérer la mémoire
+      window.URL.revokeObjectURL(url);
+
+      toastify.success(`${contactCount} contact(s) sans réponse exporté(s) avec succès`);
+    } catch (error) {
+      console.error("Erreur lors de l'export:", error);
+      toastify.error(error.response?.data?.error || "Erreur lors de l'export des contacts");
+    }
+  };
+
   const handleLaunchCampaign = async () => {
     try {
       setLaunchingCampaign(true);
-      await updateCampagneStatus(campaignId,"Actif");
+      await updateCampagneStatus(campaignId, "Actif");
       toastify.success('Campagne lancée avec succès !');
       const campaignResponse = await getCampagneById(campaignId);
       setCampaignData(campaignResponse.data);
@@ -797,8 +847,8 @@ export function CampaignDetailDashboard() {
             <div className="flex flex-wrap items-center gap-3">
               {/* Mode automatique */}
               <div className={`flex items-center gap-2 rounded-lg px-4 py-2 border transition-all duration-300 ${campaignData.enrichissement === "En cours"
-                  ? 'bg-green-50 border-green-200'
-                  : 'bg-white/60 border-gray-200'
+                ? 'bg-green-50 border-green-200'
+                : 'bg-white/60 border-gray-200'
                 }`}>
                 <Typography variant="small" className="font-medium text-blue-gray-700">
                   Mode Auto
@@ -1538,212 +1588,207 @@ export function CampaignDetailDashboard() {
 
       {/* Dialog de confirmation de suppression */}
       <Dialog
-  open={deleteDialogOpen}
-  handler={() => {
-    if (!deleting) {
-      setDeleteDialogOpen(false);
-      setDeleteOption('campaign-only'); // Reset option
-    }
-  }}
-  size="md"
-  className="bg-gradient-to-br from-noir-absolu via-bleu-fonce/90 to-rouge-danger/10 border-2 border-rouge-danger/40 shadow-neon-red backdrop-blur-xl"
->
-  <DialogHeader className="flex items-center gap-3 pb-4 border-b border-rouge-danger/30 bg-gradient-to-r from-rouge-danger/10 to-orange-vif/10 relative">
-    {/* Particules d'alerte */}
-    <div className="absolute top-2 right-4 w-1.5 h-1.5 bg-rouge-danger rounded-full animate-pulse shadow-neon-red"></div>
-    <div className="absolute top-6 right-8 w-1 h-1 bg-orange-vif rounded-full animate-pulse" style={{ animationDelay: '0.3s' }}></div>
-    
-    <div className="p-3 bg-gradient-to-br from-rouge-danger/20 to-orange-vif/20 rounded-xl backdrop-blur-sm border border-rouge-danger/30 shadow-neon-red">
-      <ExclamationTriangleIcon className="h-6 w-6 text-rouge-danger animate-bounce" />
-    </div>
-    <Typography variant="h4" className="text-blanc-pur font-bold">
-      Supprimer la campagne
-    </Typography>
-  </DialogHeader>
-  
-  <DialogBody className="space-y-6 p-6">
-    <div className="bg-gradient-to-r from-rouge-danger/5 to-orange-vif/5 rounded-xl p-4 border border-rouge-danger/20">
-      <Typography className="text-blanc-pur mb-4">
-        Vous êtes sur le point de supprimer la campagne <strong className="text-bleu-neon">"{campaignData.nom}"</strong>.
-        Choisissez une option de suppression :
-      </Typography>
-    </div>
-
-    {/* Options de suppression */}
-    <div className="space-y-4">
-      {/* Option 1: Supprimer seulement la campagne */}
-      <div
-        className={`border-2 rounded-xl p-5 cursor-pointer transition-all duration-300 backdrop-blur-sm relative group ${
-          deleteOption === 'campaign-only'
-            ? 'border-bleu-neon bg-gradient-to-r from-bleu-neon/10 to-violet-plasma/5 shadow-neon-blue'
-            : 'border-gris-metallique/30 hover:border-bleu-neon/50 bg-gradient-to-r from-bleu-fonce/30 to-noir-absolu/50'
-        }`}
-        onClick={() => setDeleteOption('campaign-only')}
+        open={deleteDialogOpen}
+        handler={() => {
+          if (!deleting) {
+            setDeleteDialogOpen(false);
+            setDeleteOption('campaign-only'); // Reset option
+          }
+        }}
+        size="md"
+        className="bg-gradient-to-br from-noir-absolu via-bleu-fonce/90 to-rouge-danger/10 border-2 border-rouge-danger/40 shadow-neon-red backdrop-blur-xl"
       >
-        {/* Effet de lueur au survol */}
-        <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-bleu-neon/5 to-violet-plasma/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-        
-        <div className="flex items-start gap-4 relative z-10">
-          <div className="flex items-center h-6 mt-1">
-            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${
-              deleteOption === 'campaign-only'
-                ? 'border-bleu-neon bg-bleu-neon shadow-neon-blue'
-                : 'border-gris-metallique group-hover:border-bleu-neon'
-            }`}>
-              {deleteOption === 'campaign-only' && (
-                <div className="w-2.5 h-2.5 rounded-full bg-noir-absolu animate-pulse"></div>
-              )}
+        <DialogHeader className="flex items-center gap-3 pb-4 border-b border-rouge-danger/30 bg-gradient-to-r from-rouge-danger/10 to-orange-vif/10 relative">
+          {/* Particules d'alerte */}
+          <div className="absolute top-2 right-4 w-1.5 h-1.5 bg-rouge-danger rounded-full animate-pulse shadow-neon-red"></div>
+          <div className="absolute top-6 right-8 w-1 h-1 bg-orange-vif rounded-full animate-pulse" style={{ animationDelay: '0.3s' }}></div>
+
+          <div className="p-3 bg-gradient-to-br from-rouge-danger/20 to-orange-vif/20 rounded-xl backdrop-blur-sm border border-rouge-danger/30 shadow-neon-red">
+            <ExclamationTriangleIcon className="h-6 w-6 text-rouge-danger animate-bounce" />
+          </div>
+          <Typography variant="h4" className="text-blanc-pur font-bold">
+            Supprimer la campagne
+          </Typography>
+        </DialogHeader>
+
+        <DialogBody className="space-y-6 p-6">
+          <div className="bg-gradient-to-r from-rouge-danger/5 to-orange-vif/5 rounded-xl p-4 border border-rouge-danger/20">
+            <Typography className="text-blanc-pur mb-4">
+              Vous êtes sur le point de supprimer la campagne <strong className="text-bleu-neon">"{campaignData.nom}"</strong>.
+              Choisissez une option de suppression :
+            </Typography>
+          </div>
+
+          {/* Options de suppression */}
+          <div className="space-y-4">
+            {/* Option 1: Supprimer seulement la campagne */}
+            <div
+              className={`border-2 rounded-xl p-5 cursor-pointer transition-all duration-300 backdrop-blur-sm relative group ${deleteOption === 'campaign-only'
+                ? 'border-bleu-neon bg-gradient-to-r from-bleu-neon/10 to-violet-plasma/5 shadow-neon-blue'
+                : 'border-gris-metallique/30 hover:border-bleu-neon/50 bg-gradient-to-r from-bleu-fonce/30 to-noir-absolu/50'
+                }`}
+              onClick={() => setDeleteOption('campaign-only')}
+            >
+              {/* Effet de lueur au survol */}
+              <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-bleu-neon/5 to-violet-plasma/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+
+              <div className="flex items-start gap-4 relative z-10">
+                <div className="flex items-center h-6 mt-1">
+                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${deleteOption === 'campaign-only'
+                    ? 'border-bleu-neon bg-bleu-neon shadow-neon-blue'
+                    : 'border-gris-metallique group-hover:border-bleu-neon'
+                    }`}>
+                    {deleteOption === 'campaign-only' && (
+                      <div className="w-2.5 h-2.5 rounded-full bg-noir-absolu animate-pulse"></div>
+                    )}
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <Typography variant="h6" className="text-blanc-pur mb-2 font-bold">
+                    Supprimer seulement la campagne
+                  </Typography>
+                  <Typography variant="small" className="text-gris-clair/80 mb-3">
+                    Les contacts <span className="text-bleu-neon font-bold">({stats.totalContacts})</span> seront conservés et pourront être réutilisés
+                    dans d'autres campagnes.
+                  </Typography>
+                  <div className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 bg-vert-plasma rounded-full animate-pulse shadow-neon-green"></div>
+                    <Typography variant="small" className="text-vert-plasma font-medium">
+                      Option recommandée pour conserver vos données
+                    </Typography>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Option 2: Supprimer avec contacts */}
+            <div
+              className={`border-2 rounded-xl p-5 cursor-pointer transition-all duration-300 backdrop-blur-sm relative group ${deleteOption === 'with-contacts'
+                ? 'border-rouge-danger bg-gradient-to-r from-rouge-danger/20 to-orange-vif/10 shadow-neon-red'
+                : 'border-gris-metallique/30 hover:border-rouge-danger/50 bg-gradient-to-r from-bleu-fonce/30 to-noir-absolu/50'
+                }`}
+              onClick={() => setDeleteOption('with-contacts')}
+            >
+              {/* Effet de lueur rouge au survol */}
+              <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-rouge-danger/10 to-orange-vif/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+
+              <div className="flex items-start gap-4 relative z-10">
+                <div className="flex items-center h-6 mt-1">
+                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${deleteOption === 'with-contacts'
+                    ? 'border-rouge-danger bg-rouge-danger shadow-neon-red'
+                    : 'border-gris-metallique group-hover:border-rouge-danger'
+                    }`}>
+                    {deleteOption === 'with-contacts' && (
+                      <div className="w-2.5 h-2.5 rounded-full bg-blanc-pur animate-pulse"></div>
+                    )}
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <Typography variant="h6" className="text-blanc-pur mb-2 font-bold">
+                    Supprimer la campagne et tous ses contacts
+                  </Typography>
+                  <Typography variant="small" className="text-gris-clair/80 mb-3">
+                    Suppression complète : la campagne ET ses <span className="text-rouge-danger font-bold">{stats.totalContacts}</span> contacts
+                    seront définitivement effacés.
+                  </Typography>
+                  <div className="flex items-center gap-2">
+                    <ExclamationTriangleIcon className="h-4 w-4 text-rouge-danger animate-pulse" />
+                    <Typography variant="small" className="text-rouge-danger font-medium">
+                      Action irréversible - Toutes les données seront perdues
+                    </Typography>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-          <div className="flex-1">
-            <Typography variant="h6" className="text-blanc-pur mb-2 font-bold">
-              Supprimer seulement la campagne
-            </Typography>
-            <Typography variant="small" className="text-gris-clair/80 mb-3">
-              Les contacts <span className="text-bleu-neon font-bold">({stats.totalContacts})</span> seront conservés et pourront être réutilisés
-              dans d'autres campagnes.
-            </Typography>
-            <div className="flex items-center gap-2">
-              <div className="w-1.5 h-1.5 bg-vert-plasma rounded-full animate-pulse shadow-neon-green"></div>
-              <Typography variant="small" className="text-vert-plasma font-medium">
-                Option recommandée pour conserver vos données
+
+          {/* Statistiques récapitulatives */}
+          <div className="bg-gradient-to-r from-bleu-fonce/50 to-violet-plasma/20 rounded-xl p-5 border border-bleu-neon/20 backdrop-blur-sm space-y-4">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-1 h-6 bg-gradient-to-b from-bleu-neon to-violet-plasma rounded-full shadow-neon-blue"></div>
+              <Typography variant="small" className="font-bold text-bleu-neon uppercase tracking-wider">
+                Récapitulatif de la suppression
               </Typography>
             </div>
-          </div>
-        </div>
-      </div>
 
-      {/* Option 2: Supprimer avec contacts */}
-      <div
-        className={`border-2 rounded-xl p-5 cursor-pointer transition-all duration-300 backdrop-blur-sm relative group ${
-          deleteOption === 'with-contacts'
-            ? 'border-rouge-danger bg-gradient-to-r from-rouge-danger/20 to-orange-vif/10 shadow-neon-red'
-            : 'border-gris-metallique/30 hover:border-rouge-danger/50 bg-gradient-to-r from-bleu-fonce/30 to-noir-absolu/50'
-        }`}
-        onClick={() => setDeleteOption('with-contacts')}
-      >
-        {/* Effet de lueur rouge au survol */}
-        <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-rouge-danger/10 to-orange-vif/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-        
-        <div className="flex items-start gap-4 relative z-10">
-          <div className="flex items-center h-6 mt-1">
-            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${
-              deleteOption === 'with-contacts'
-                ? 'border-rouge-danger bg-rouge-danger shadow-neon-red'
-                : 'border-gris-metallique group-hover:border-rouge-danger'
-            }`}>
-              {deleteOption === 'with-contacts' && (
-                <div className="w-2.5 h-2.5 rounded-full bg-blanc-pur animate-pulse"></div>
-              )}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-gradient-to-r from-noir-absolu/60 to-bleu-fonce/40 rounded-lg p-3 border border-gris-metallique/20">
+                <Typography variant="small" className="text-violet-plasma/80 uppercase text-xs tracking-wide">Contacts totaux</Typography>
+                <Typography variant="h6" className="font-bold text-blanc-pur">{stats.totalContacts}</Typography>
+              </div>
+              <div className="bg-gradient-to-r from-noir-absolu/60 to-bleu-fonce/40 rounded-lg p-3 border border-gris-metallique/20">
+                <Typography variant="small" className="text-violet-plasma/80 uppercase text-xs tracking-wide">Messages envoyés</Typography>
+                <Typography variant="h6" className="font-bold text-blanc-pur">{stats.messagesSent}</Typography>
+              </div>
+              <div className="bg-gradient-to-r from-noir-absolu/60 to-bleu-fonce/40 rounded-lg p-3 border border-gris-metallique/20">
+                <Typography variant="small" className="text-violet-plasma/80 uppercase text-xs tracking-wide">Réponses reçues</Typography>
+                <Typography variant="h6" className="font-bold text-blanc-pur">{stats.responsesReceived}</Typography>
+              </div>
+              <div className="bg-gradient-to-r from-noir-absolu/60 to-bleu-fonce/40 rounded-lg p-3 border border-gris-metallique/20">
+                <Typography variant="small" className="text-violet-plasma/80 uppercase text-xs tracking-wide">Rendez-vous pris</Typography>
+                <Typography variant="h6" className="font-bold text-vert-plasma">{stats.interested}</Typography>
+              </div>
             </div>
+
+            {deleteOption === 'with-contacts' && (
+              <div className="bg-gradient-to-r from-rouge-danger/20 to-orange-vif/10 rounded-lg p-4 border border-rouge-danger/30 mt-4">
+                <div className="flex items-center gap-2">
+                  <ExclamationTriangleIcon className="h-5 w-5 text-rouge-danger animate-pulse" />
+                  <Typography variant="small" className="font-bold text-rouge-danger">
+                    Attention : Cette action supprimera définitivement toutes ces données !
+                  </Typography>
+                </div>
+              </div>
+            )}
           </div>
-          <div className="flex-1">
-            <Typography variant="h6" className="text-blanc-pur mb-2 font-bold">
-              Supprimer la campagne et tous ses contacts
-            </Typography>
-            <Typography variant="small" className="text-gris-clair/80 mb-3">
-              Suppression complète : la campagne ET ses <span className="text-rouge-danger font-bold">{stats.totalContacts}</span> contacts
-              seront définitivement effacés.
-            </Typography>
-            <div className="flex items-center gap-2">
-              <ExclamationTriangleIcon className="h-4 w-4 text-rouge-danger animate-pulse" />
-              <Typography variant="small" className="text-rouge-danger font-medium">
-                Action irréversible - Toutes les données seront perdues
-              </Typography>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+        </DialogBody>
 
-    {/* Statistiques récapitulatives */}
-    <div className="bg-gradient-to-r from-bleu-fonce/50 to-violet-plasma/20 rounded-xl p-5 border border-bleu-neon/20 backdrop-blur-sm space-y-4">
-      <div className="flex items-center gap-2 mb-4">
-        <div className="w-1 h-6 bg-gradient-to-b from-bleu-neon to-violet-plasma rounded-full shadow-neon-blue"></div>
-        <Typography variant="small" className="font-bold text-bleu-neon uppercase tracking-wider">
-          Récapitulatif de la suppression
-        </Typography>
-      </div>
-      
-      <div className="grid grid-cols-2 gap-4">
-        <div className="bg-gradient-to-r from-noir-absolu/60 to-bleu-fonce/40 rounded-lg p-3 border border-gris-metallique/20">
-          <Typography variant="small" className="text-violet-plasma/80 uppercase text-xs tracking-wide">Contacts totaux</Typography>
-          <Typography variant="h6" className="font-bold text-blanc-pur">{stats.totalContacts}</Typography>
-        </div>
-        <div className="bg-gradient-to-r from-noir-absolu/60 to-bleu-fonce/40 rounded-lg p-3 border border-gris-metallique/20">
-          <Typography variant="small" className="text-violet-plasma/80 uppercase text-xs tracking-wide">Messages envoyés</Typography>
-          <Typography variant="h6" className="font-bold text-blanc-pur">{stats.messagesSent}</Typography>
-        </div>
-        <div className="bg-gradient-to-r from-noir-absolu/60 to-bleu-fonce/40 rounded-lg p-3 border border-gris-metallique/20">
-          <Typography variant="small" className="text-violet-plasma/80 uppercase text-xs tracking-wide">Réponses reçues</Typography>
-          <Typography variant="h6" className="font-bold text-blanc-pur">{stats.responsesReceived}</Typography>
-        </div>
-        <div className="bg-gradient-to-r from-noir-absolu/60 to-bleu-fonce/40 rounded-lg p-3 border border-gris-metallique/20">
-          <Typography variant="small" className="text-violet-plasma/80 uppercase text-xs tracking-wide">Rendez-vous pris</Typography>
-          <Typography variant="h6" className="font-bold text-vert-plasma">{stats.interested}</Typography>
-        </div>
-      </div>
+        <DialogFooter className="flex items-center justify-between border-t border-rouge-danger/30 bg-gradient-to-r from-noir-absolu/80 to-bleu-fonce/60 backdrop-blur-sm relative">
+          {/* Ligne de danger en bas */}
+          <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-rouge-danger via-orange-vif to-rouge-danger opacity-60"></div>
 
-      {deleteOption === 'with-contacts' && (
-        <div className="bg-gradient-to-r from-rouge-danger/20 to-orange-vif/10 rounded-lg p-4 border border-rouge-danger/30 mt-4">
-          <div className="flex items-center gap-2">
-            <ExclamationTriangleIcon className="h-5 w-5 text-rouge-danger animate-pulse" />
-            <Typography variant="small" className="font-bold text-rouge-danger">
-              Attention : Cette action supprimera définitivement toutes ces données !
-            </Typography>
-          </div>
-        </div>
-      )}
-    </div>
-  </DialogBody>
+          <Button
+            variant="outlined"
+            className="border-2 border-gris-metallique/50 text-gris-clair hover:bg-gris-metallique/10 hover:border-gris-metallique transition-all duration-300 font-medium"
+            onClick={() => {
+              setDeleteDialogOpen(false);
+              setDeleteOption('campaign-only');
+            }}
+            disabled={deleting}
+          >
+            Annuler
+          </Button>
 
-  <DialogFooter className="flex items-center justify-between border-t border-rouge-danger/30 bg-gradient-to-r from-noir-absolu/80 to-bleu-fonce/60 backdrop-blur-sm relative">
-    {/* Ligne de danger en bas */}
-    <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-rouge-danger via-orange-vif to-rouge-danger opacity-60"></div>
-    
-    <Button
-      variant="outlined"
-      className="border-2 border-gris-metallique/50 text-gris-clair hover:bg-gris-metallique/10 hover:border-gris-metallique transition-all duration-300 font-medium"
-      onClick={() => {
-        setDeleteDialogOpen(false);
-        setDeleteOption('campaign-only');
-      }}
-      disabled={deleting}
-    >
-      Annuler
-    </Button>
+          <Button
+            variant="filled"
+            className={`flex items-center gap-2 min-w-[160px] justify-center font-bold transition-all duration-300 ${deleteOption === 'with-contacts'
+              ? 'bg-gradient-to-r from-rouge-danger to-orange-vif hover:shadow-neon-red text-blanc-pur border-2 border-rouge-danger/50'
+              : 'bg-gradient-to-r from-orange-vif to-rouge-danger hover:shadow-neon-orange text-noir-absolu border-2 border-orange-vif/50'
+              }`}
+            onClick={onDeleteCampaign}
+            disabled={deleting}
+          >
+            {deleting && <Spinner className="h-4 w-4" />}
+            {deleting ? (
+              'Suppression...'
+            ) : deleteOption === 'with-contacts' ? (
+              <>
+                <TrashIcon className="h-4 w-4" />
+                Tout supprimer
+              </>
+            ) : (
+              <>
+                <TrashIcon className="h-4 w-4" />
+                Supprimer campagne
+              </>
+            )}
+          </Button>
 
-    <Button
-      variant="filled"
-      className={`flex items-center gap-2 min-w-[160px] justify-center font-bold transition-all duration-300 ${
-        deleteOption === 'with-contacts' 
-          ? 'bg-gradient-to-r from-rouge-danger to-orange-vif hover:shadow-neon-red text-blanc-pur border-2 border-rouge-danger/50'
-          : 'bg-gradient-to-r from-orange-vif to-rouge-danger hover:shadow-neon-orange text-noir-absolu border-2 border-orange-vif/50'
-      }`}
-      onClick={onDeleteCampaign}
-      disabled={deleting}
-    >
-      {deleting && <Spinner className="h-4 w-4" />}
-      {deleting ? (
-        'Suppression...'
-      ) : deleteOption === 'with-contacts' ? (
-        <>
-          <TrashIcon className="h-4 w-4" />
-          Tout supprimer
-        </>
-      ) : (
-        <>
-          <TrashIcon className="h-4 w-4" />
-          Supprimer campagne
-        </>
-      )}
-    </Button>
-    
-    {/* Points décoratifs du footer */}
-    <div className="absolute top-4 left-4 w-1 h-1 bg-rouge-danger rounded-full opacity-50 animate-pulse"></div>
-    <div className="absolute top-2 left-8 w-0.5 h-0.5 bg-orange-vif rounded-full opacity-70 animate-pulse" style={{ animationDelay: '0.4s' }}></div>
-  </DialogFooter>
-</Dialog>
+          {/* Points décoratifs du footer */}
+          <div className="absolute top-4 left-4 w-1 h-1 bg-rouge-danger rounded-full opacity-50 animate-pulse"></div>
+          <div className="absolute top-2 left-8 w-0.5 h-0.5 bg-orange-vif rounded-full opacity-70 animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+        </DialogFooter>
+      </Dialog>
 
       {/* Boutons d'action supplémentaires dans la barre d'actions */}
       <div className="fixed bottom-6 right-6 flex flex-col gap-2 z-50">
@@ -1759,6 +1804,20 @@ export function CampaignDetailDashboard() {
             Voir Contacts ({stats.totalContacts})
           </Button>
         )}
+
+        {stats.messagesSent > 0 && (stats.messagesSent - stats.responsesReceived) > 0 && (
+          <Button
+            size="sm"
+            variant="gradient"
+            color="cyan"
+            className="flex items-center gap-2 shadow-lg"
+            onClick={exportContactsSansReponse}
+          >
+            <ArrowDownTrayIcon className="h-4 w-4" />
+            Exporter sans réponse ({stats.messagesSent - stats.responsesReceived})
+          </Button>
+        )}
+
 
         <Button
           size="sm"
