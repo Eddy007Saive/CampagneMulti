@@ -32,10 +32,11 @@ export function liste() {
     const [sortOrder, setSortOrder] = useState("asc");
 
     useEffect(() => {
-         if (isAuthenticated() && user?.userId) {
+        console.log("user?.userId",user);
+         if (isAuthenticated() && user) {
             fetchData();
         }
-    }, [user?.userId,currentPage, limit, sortBy, sortOrder]);
+    }, [user,currentPage, limit, sortBy, sortOrder]);
 
     const fetchData = async () => {
         try {
@@ -47,7 +48,6 @@ export function liste() {
                 sortBy,
                 sortOrder
             });
-            console.log("response",response);
             
 
             setCampagnes(response.data.campagnes);

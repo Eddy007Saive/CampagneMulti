@@ -85,20 +85,17 @@ export const NotificationProvider = ({ children }) => {
   // 👉 NOUVEAU : Effet principal qui gère l'abonnement basé sur l'authentification
   useEffect(() => {
     if (!isAuthenticated() || !user) {
-      console.log('[NotificationProvider] Utilisateur non connecté, nettoyage');
       stopPolling();
       setUnreadCount(0);
       setIsLoading(false);
       return;
     }
 
-    console.log('[NotificationProvider] Utilisateur connecté, initialisation');
     fetchUnreadCount(); // Premier chargement
     startPolling(); // Démarrer le polling
 
     // Cleanup
     return () => {
-      console.log('[NotificationProvider] Cleanup');
       stopPolling();
     };
   }, [user, isAuthenticated, fetchUnreadCount, startPolling, stopPolling]);
@@ -148,7 +145,6 @@ export const NotificationProvider = ({ children }) => {
   useEffect(() => {
     const onUpdate = (e) => {
       if (!isAuthenticated() || !user) return;
-      console.log('[Listener déclenché]', e.type);
       fetchUnreadCount();
     };
 
@@ -237,7 +233,6 @@ export const useWebSocketNotifications = (wsUrl) => {
       };
 
       wsRef.current.onclose = () => {
-        console.log('WebSocket fermé');
         setTimeout(() => {
           if (wsRef.current?.readyState === WebSocket.CLOSED) {
             wsRef.current = new WebSocket(wsUrl);
@@ -281,7 +276,6 @@ export const useNotificationEvents = () => {
     }
 
     try {
-      console.log("fetchUnreadCount called");
       setIsLoading(true);
       const response = await getUnreadNotificationsCount();
       setUnreadCount(response.data.count);
@@ -301,7 +295,6 @@ export const useNotificationEvents = () => {
 
 // Fonctions utilitaires pour déclencher les événements
 export const emitNotificationEvent = (eventType, detail = {}) => {
-  console.log('[emitNotificationEvent]', eventType, detail);
   const event = new CustomEvent(eventType, { detail });
   window.dispatchEvent(event);
 };

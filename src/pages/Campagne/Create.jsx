@@ -28,6 +28,7 @@ import { ToastContainer } from "react-toastify";
 import 'react-toastify/dist/ReactToastify.css';
 import toastify from "@/utils/toastify";
 import { useNavigate } from 'react-router-dom';
+import { emeliaService } from "@/services/Emelia";
 
 const CampagneSchema = {
   nom: { required: true, minLength: 3 },
@@ -41,7 +42,9 @@ const CampagneSchema = {
   profilsParJour: { required: true, min: 1, max: 120 },
   messagesParJour: { required: true, min: 1, max: 40 },
   joursRafraichissement: { required: true, minLength: 1 },
-  relances: { required: true, minLength: 1 }
+  relances: { required: true, minLength: 1 },
+  coldDelayAfterFollowUp: { required: false, min: 1 },
+  coldCampaignIdEmelia: { required: false }
 };
 
 export function Create() {
@@ -53,7 +56,10 @@ export function Create() {
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState(null);
   const [carteSelectionnee, setCarteSelectionnee] = useState('initial');
-
+  const [emeliaConnected, setEmeliaConnected] = useState(false);
+  const [emeliaLoading, setEmeliaLoading] = useState(false);
+  const [emeliaCampaigns, setEmeliaCampaigns] = useState([]);
+  const [emeliaApiKey, setEmeliaApiKey] = useState("");
   const [formData, setFormData] = useState({
     nom: "",
     posteRecherche: "",
@@ -76,13 +82,18 @@ export function Create() {
       }
     ],
     Users: "",
+    coldEmail: false,
+    coldDelayAfterFollowUp: "",
+    coldEmailMode: "", 
+    coldCampaignIdEmelia: ""
   });
 
   const steps = [
     { id: 0, title: "Informations générales", icon: Users },
     { id: 1, title: "Critères professionnels", icon: Building },
     { id: 2, title: "Planning et fréquence", icon: Calendar },
-    { id: 3, title: "Message et relances", icon: MessageSquare }
+    { id: 3, title: "Message et relances", icon: MessageSquare },
+    { id: 4, title: "Cold Email (optionnel)", icon: MessageSquare } // 🆕 NOUVEAU
   ];
 
   const joursOptions = [
@@ -301,6 +312,20 @@ export function Create() {
     const schema = CampagneSchema[fieldName];
     if (!schema) return null;
 
+    if (fieldName === 'coldDelayAfterFollowUp') {
+      if (formData.coldEmail && (!value || parseInt(value) < 1)) {
+        return 'Le délai doit être supérieur ou égal à 1 jour';
+      }
+      return null;
+    }
+
+    if (fieldName === 'coldCampaignIdEmelia') {
+      if (formData.coldEmail && formData.coldEmailMode === 'existing' && !value) {
+        return 'Veuillez sélectionner une campagne Emelia';
+      }
+      return null;
+    }
+
     if (schema.required) {
       if (fieldName === 'joursRafraichissement') {
         if (!value || !Array.isArray(value) || value.length === 0) {
@@ -355,6 +380,8 @@ export function Create() {
         return ['profilsParJour', 'messagesParJour', 'joursRafraichissement'];
       case 3:
         return ['Template_message', 'relances'];
+      case 4: // 🆕 NOUVEAU
+        return formData.coldEmail ? ['coldDelayAfterFollowUp'] : [];
       default:
         return [];
     }
@@ -381,6 +408,24 @@ export function Create() {
 
     getUserFromStorage();
   }, []);
+
+  useEffect(() => {
+    const checkEmeliaConnection = async () => {
+      try {
+        const response = await fetch('/api/users/emelia-status');
+        const data = await response.json();
+        if (data.connected) {
+          setEmeliaConnected(true);
+        }
+      } catch (error) {
+        console.error("Erreur vérification Emelia:", error);
+      }
+    };
+
+    if (currentUser) {
+      checkEmeliaConnection();
+    }
+  }, [currentUser]);
 
   const validateCurrentStep = () => {
     const fieldsToValidate = getFieldsForStep(currentStep);
@@ -456,15 +501,97 @@ export function Create() {
     return query || "Aucune requête générée";
   };
 
+  const connectEmelia = async (apiKey) => {
+    setEmeliaLoading(true);
+    try {
+      // Tester la connexion
+      const testResult = await emeliaService.testConnection(apiKey);
+
+      if (testResult.success) {
+        // Stocker l'API key en mémoire (pour cette session uniquement)
+        setEmeliaApiKey(apiKey);
+        setEmeliaConnected(true);
+        toastify.success("Compte Emelia connecté avec succès");
+
+        // Charger automatiquement les campagnes
+        fetchEmeliaCampaigns(apiKey);
+      } else {
+        toastify.error("Erreur: " + (testResult.error || "Connexion impossible"));
+      }
+    } catch (error) {
+      console.error("Erreur connexion Emelia:", error);
+      toastify.error("Impossible de se connecter à Emelia");
+    } finally {
+      setEmeliaLoading(false);
+    }
+  };
+
+  // 🔄 NOUVELLE VERSION - Récupération des campagnes
+  const fetchEmeliaCampaigns = async (apiKey = emeliaApiKey) => {
+    if (!apiKey) {
+      toastify.error("API Key manquante");
+      return;
+    }
+
+    setEmeliaLoading(true);
+    try {
+      const result = await emeliaService.getCampaigns(apiKey);
+      console.log("resultat",result);
+      
+      if (result.success) {
+
+        console.log("eto e");
+        
+        // Adapter selon la structure exacte de la réponse Emelia
+        // Si c'est un tableau direct: setEmeliaCampaigns(result.campaigns)
+        // Si c'est dans result.campaigns.data: setEmeliaCampaigns(result.campaigns.data)
+        let campaigns=result.campaigns.campaigns;
+        console.log("campagnes",campaigns);
+        
+        setEmeliaCampaigns(campaigns || []);
+
+        if (campaigns.length === 0) {
+          toastify.info("Aucune campagne trouvée dans votre compte Emelia");
+        } else {
+          toastify.success(`${campaigns.length} campagne(s) chargée(s)`);
+        }
+      } else {
+        toastify.error("Erreur: " + result.error);
+        setEmeliaCampaigns([]);
+      }
+    } catch (error) {
+      console.error("Erreur récupération campagnes:", error);
+      toastify.error("Impossible de récupérer les campagnes");
+      setEmeliaCampaigns([]);
+    } finally {
+      setEmeliaLoading(false);
+    }
+  };
+
+  // 🔄 MISE À JOUR - Déconnexion
+  const disconnectEmelia = () => {
+    setEmeliaConnected(false);
+    setEmeliaCampaigns([]);
+    setEmeliaApiKey(""); // Effacer l'API key de la mémoire
+    setFormData(prev => ({
+      ...prev,
+      coldEmail: false,
+      coldDelayAfterFollowUp: "",
+      coldEmailMode: "",
+      coldCampaignIdEmelia: ""
+    }));
+    toastify.info("Compte Emelia déconnecté");
+  };
+
   const onSubmit = async (data) => {
     setIsSubmitting(true);
     try {
-      const relancesIncompletes = formData.relances.filter(r => 
-        !r.joursApres || 
-        !r.instruction || 
+      const relancesIncompletes = formData.relances.filter(r =>
+        !r.joursApres ||
+        !r.instruction ||
         r.instruction.trim().length < 10
       );
-      
+
       if (relancesIncompletes.length > 0) {
         toastify.error(`${relancesIncompletes.length} relance(s) incomplète(s). Veuillez remplir tous les champs.`);
         setIsSubmitting(false);
@@ -496,6 +623,10 @@ export function Create() {
         "Jours_enrichissement": formData.joursRafraichissement,
         "Statut d'enrichissement": "En attente",
         "Relances": JSON.stringify(relancesClean),
+        // 🆕 COLD EMAIL
+        "ColdEmail": formData.coldEmail,
+        "coldDelayAfterFollowUp": formData.coldEmail ? parseInt(formData.coldDelayAfterFollowUp) : null,
+        "coldCampaignIdEmelia": formData.coldCampaignIdEmelia || "",
         "Users": [formData.Users]
       };
 
@@ -572,11 +703,10 @@ export function Create() {
 
         return (
           <div key={step.id} className="flex flex-col items-center flex-1">
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${
-              isActive ? 'bg-blue-600 text-white' :
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${isActive ? 'bg-blue-600 text-white' :
               isCompleted ? 'bg-green-600 text-white' :
-              'bg-gray-300 text-gray-600'
-            }`}>
+                'bg-gray-300 text-gray-600'
+              }`}>
               {isCompleted ? <Check size={16} /> : <Icon size={16} />}
             </div>
             <span className={`text-sm mt-2 text-center ${isActive ? 'text-blue-600 font-semibold' : 'text-gray-600'}`}>
@@ -606,9 +736,8 @@ export function Create() {
                   value={formData.nom}
                   name="nom"
                   type="text"
-                  className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${
-                    stepValidationErrors.nom ? 'border-red-500' : 'border-gray-300'
-                  }`}
+                  className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${stepValidationErrors.nom ? 'border-red-500' : 'border-gray-300'
+                    }`}
                   onChange={handleChange}
                   placeholder="Ex: Recrutement Développeur Senior - Mars 2025"
                 />
@@ -629,9 +758,8 @@ export function Create() {
                   value={formData.zoneGeographique}
                   name="zoneGeographique"
                   type="text"
-                  className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${
-                    stepValidationErrors.zoneGeographique ? 'border-red-500' : 'border-gray-300'
-                  }`}
+                  className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${stepValidationErrors.zoneGeographique ? 'border-red-500' : 'border-gray-300'
+                    }`}
                   onChange={handleChange}
                   placeholder="Paris, France"
                 />
@@ -663,9 +791,8 @@ export function Create() {
                   value={formData.posteRecherche}
                   name="posteRecherche"
                   type="text"
-                  className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${
-                    stepValidationErrors.posteRecherche ? 'border-red-500' : 'border-gray-300'
-                  }`}
+                  className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${stepValidationErrors.posteRecherche ? 'border-red-500' : 'border-gray-300'
+                    }`}
                   onChange={handleChange}
                   placeholder="Ex: Développeur OR Developer AND Senior"
                 />
@@ -767,9 +894,8 @@ export function Create() {
                   value={formData.languesParlees}
                   onChange={handleChange}
                   placeholder="Sélectionner ou saisir une langue"
-                  className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${
-                    stepValidationErrors.languesParlees ? 'border-red-500' : 'border-gray-300'
-                  }`}
+                  className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${stepValidationErrors.languesParlees ? 'border-red-500' : 'border-gray-300'
+                    }`}
                 />
                 <datalist id="langues-list">
                   {langues.map((langue) => (
@@ -826,9 +952,8 @@ export function Create() {
                   type="number"
                   min="1"
                   max="120"
-                  className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${
-                    stepValidationErrors.profilsParJour ? 'border-red-500' : 'border-gray-300'
-                  }`}
+                  className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${stepValidationErrors.profilsParJour ? 'border-red-500' : 'border-gray-300'
+                    }`}
                   onChange={handleChange}
                   placeholder="Ex: 20"
                 />
@@ -855,9 +980,8 @@ export function Create() {
                   type="number"
                   min="1"
                   max="40"
-                  className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${
-                    stepValidationErrors.messagesParJour ? 'border-red-500' : 'border-gray-300'
-                  }`}
+                  className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${stepValidationErrors.messagesParJour ? 'border-red-500' : 'border-gray-300'
+                    }`}
                   onChange={handleChange}
                   placeholder="Ex: 15"
                 />
@@ -910,18 +1034,16 @@ export function Create() {
                       key={jour.id}
                       type="button"
                       onClick={() => handleJourToggle(jour.id)}
-                      className={`relative p-3 rounded-lg border-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                        formData.joursRafraichissement.includes(jour.id)
-                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
-                          : 'border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-white dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-500'
-                      }`}
+                      className={`relative p-3 rounded-lg border-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 ${formData.joursRafraichissement.includes(jour.id)
+                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+                        : 'border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-white dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-500'
+                        }`}
                     >
                       <div className="text-center">
-                        <div className={`w-8 h-8 mx-auto rounded-full flex items-center justify-center text-sm font-semibold mb-1 ${
-                          formData.joursRafraichissement.includes(jour.id)
-                            ? 'bg-blue-500 text-white'
-                            : 'bg-gray-100 dark:bg-gray-600 text-gray-600 dark:text-gray-300'
-                        }`}>
+                        <div className={`w-8 h-8 mx-auto rounded-full flex items-center justify-center text-sm font-semibold mb-1 ${formData.joursRafraichissement.includes(jour.id)
+                          ? 'bg-blue-500 text-white'
+                          : 'bg-gray-100 dark:bg-gray-600 text-gray-600 dark:text-gray-300'
+                          }`}>
                           {jour.short}
                         </div>
                         <span className="text-xs">{jour.label}</span>
@@ -999,11 +1121,10 @@ export function Create() {
                   <button
                     type="button"
                     onClick={() => setCarteSelectionnee('initial')}
-                    className={`w-full relative rounded-lg p-4 transition-all duration-200 shadow-lg cursor-pointer ${
-                      carteSelectionnee === 'initial'
-                        ? 'bg-gray-800 border-2 border-blue-500'
-                        : 'bg-gray-800 border-2 border-gray-700 hover:border-blue-400'
-                    }`}
+                    className={`w-full relative rounded-lg p-4 transition-all duration-200 shadow-lg cursor-pointer ${carteSelectionnee === 'initial'
+                      ? 'bg-gray-800 border-2 border-blue-500'
+                      : 'bg-gray-800 border-2 border-gray-700 hover:border-blue-400'
+                      }`}
                   >
                     <div className="flex flex-col items-center gap-2">
                       <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center">
@@ -1036,11 +1157,10 @@ export function Create() {
                       <button
                         type="button"
                         onClick={() => setCarteSelectionnee(relance.id)}
-                        className={`w-full relative rounded-lg p-4 transition-all duration-200 shadow-lg cursor-pointer ${
-                          carteSelectionnee === relance.id
-                            ? 'bg-gray-800 border-2 border-blue-500'
-                            : 'bg-gray-800 border-2 border-gray-700 hover:border-blue-400'
-                        }`}
+                        className={`w-full relative rounded-lg p-4 transition-all duration-200 shadow-lg cursor-pointer ${carteSelectionnee === relance.id
+                          ? 'bg-gray-800 border-2 border-blue-500'
+                          : 'bg-gray-800 border-2 border-gray-700 hover:border-blue-400'
+                          }`}
                       >
                         <div className="flex flex-col items-center gap-2">
                           <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center">
@@ -1056,7 +1176,7 @@ export function Create() {
                             <span className="text-xs text-green-400">✓ Configuré</span>
                           </div>
                         )}
-                        
+
                         <button
                           type="button"
                           onClick={(e) => {
@@ -1240,6 +1360,295 @@ export function Create() {
                 </>
               )}
             </div>
+          </div>
+        );
+
+      case 4:
+        return (
+          <div className="space-y-6">
+            {/* Toggle Cold Email */}
+            <div className="p-6 bg-gray-800 rounded-lg border-2 border-gray-700">
+              <label className="flex items-center justify-between cursor-pointer">
+                <div className="flex items-center gap-3">
+                  <MessageSquare size={20} className="text-blue-400" />
+                  <div>
+                    <span className="text-white font-semibold text-lg">Activer le Cold Email</span>
+                    <p className="text-gray-400 text-sm mt-1">
+                      Envoyer automatiquement des emails après les relances LinkedIn
+                    </p>
+                  </div>
+                </div>
+                <div className="relative">
+                  <input
+                    type="checkbox"
+                    checked={formData.coldEmail}
+                    onChange={(e) => {
+                      setFormData(prev => ({ ...prev, coldEmail: e.target.checked }));
+                      if (!e.target.checked) {
+                        setFormData(prev => ({
+                          ...prev,
+                          coldDelayAfterFollowUp: "",
+                          coldEmailMode: "",
+                          coldCampaignIdEmelia: ""
+                        }));
+                      }
+                    }}
+                    className="sr-only peer"
+                  />
+                  <div className="w-14 h-7 bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-blue-600"></div>
+                </div>
+              </label>
+            </div>
+
+            {/* Configuration Cold Email */}
+            {formData.coldEmail && (
+              <>
+                {/* Délai */}
+                <div className="p-6 bg-gray-800 rounded-lg border-2 border-gray-700">
+                  <label className="flex items-center mb-3 text-sm font-medium text-white">
+                    <Clock size={16} className="mr-2" />
+                    Délai après la dernière relance LinkedIn *
+                    <Tooltip content="Nombre de jours à attendre après la dernière relance LinkedIn avant d'envoyer le cold email">
+                      <HelpCircle size={14} className="ml-2 text-gray-400 cursor-help" />
+                    </Tooltip>
+                  </label>
+                  <div className="flex items-center gap-3">
+                    <span className="text-gray-400">Attendre</span>
+                    <input
+                      type="number"
+                      min="1"
+                      value={formData.coldDelayAfterFollowUp}
+                      onChange={(e) => setFormData(prev => ({ ...prev, coldDelayAfterFollowUp: e.target.value }))}
+                      className={`w-24 p-3 border rounded-lg text-center focus:ring-2 focus:ring-blue-500 bg-gray-700 text-white ${stepValidationErrors.coldDelayAfterFollowUp ? 'border-red-500' : 'border-gray-600'
+                        }`}
+                      placeholder="3"
+                    />
+                    <span className="text-gray-400">jour{formData.coldDelayAfterFollowUp > 1 ? 's' : ''}</span>
+                  </div>
+                  {stepValidationErrors.coldDelayAfterFollowUp && (
+                    <p className="text-red-500 text-xs mt-2 flex items-center">
+                      <AlertCircle size={12} className="mr-1" />
+                      {stepValidationErrors.coldDelayAfterFollowUp.message}
+                    </p>
+                  )}
+                </div>
+
+                {/* Connexion Emelia */}
+                <div className="p-6 bg-gray-800 rounded-lg border-2 border-gray-700">
+                  <h4 className="text-white font-semibold mb-4 flex items-center gap-2">
+                    <Building size={18} className="text-purple-400" />
+                    Connexion Emelia
+                  </h4>
+
+                  {!emeliaConnected ? (
+                    <div className="space-y-4">
+                      <div className="p-4 bg-yellow-900/20 border border-yellow-600 rounded-lg">
+                        <p className="text-yellow-300 text-sm flex items-center gap-2">
+                          <AlertCircle size={16} />
+                          Vous devez connecter votre compte Emelia pour continuer
+                        </p>
+                      </div>
+                      <div>
+                        <label className="text-sm text-gray-400 mb-2 block">API Key Emelia</label>
+                        <div className="flex gap-2">
+                          <input
+                            type="password"
+                            id="emeliaApiKey"
+                            placeholder="eme_••••••••••••••••••••"
+                            className="flex-1 p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const apiKey = document.getElementById('emeliaApiKey').value;
+                              if (apiKey) connectEmelia(apiKey);
+                              else toastify.error("Veuillez saisir votre API key");
+                            }}
+                            disabled={emeliaLoading}
+                            className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
+                          >
+                            {emeliaLoading ? (
+                              <>
+                                <Loader2 size={16} className="animate-spin" />
+                                Connexion...
+                              </>
+                            ) : (
+                              'Connecter'
+                            )}
+                          </button>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-2">
+                          Trouvez votre API key dans les paramètres de votre compte Emelia
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="p-4 bg-green-900/20 border border-green-600 rounded-lg flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Check size={16} className="text-green-400" />
+                          <span className="text-green-300 text-sm">Compte Emelia connecté</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={disconnectEmelia}
+                          className="text-red-400 hover:text-red-300 text-sm underline"
+                        >
+                          Déconnecter
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Mode de campagne */}
+                {emeliaConnected && (
+                  <div className="p-6 bg-gray-800 rounded-lg border-2 border-gray-700">
+                    <h4 className="text-white font-semibold mb-4">Mode de campagne</h4>
+
+                    <div className="space-y-3">
+                      {/* Option: Campagne existante */}
+                      <label className={`flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all ${formData.coldEmailMode === 'existing'
+                        ? 'border-blue-500 bg-blue-900/20'
+                        : 'border-gray-600 hover:border-gray-500'
+                        }`}>
+                        <input
+                          type="radio"
+                          name="coldEmailMode"
+                          value="existing"
+                          checked={formData.coldEmailMode === 'existing'}
+                          onChange={(e) => {
+                            setFormData(prev => ({ ...prev, coldEmailMode: e.target.value }));
+                            if (emeliaCampaigns.length === 0) fetchEmeliaCampaigns();
+                          }}
+                          className="mt-1 mr-3"
+                        />
+                        <div className="flex-1">
+                          <span className="text-white font-medium">Lier à une campagne existante</span>
+                          <p className="text-gray-400 text-sm mt-1">
+                            Choisir une campagne Emelia déjà créée
+                          </p>
+                        </div>
+                      </label>
+
+                      {/* Sélection campagne */}
+                      {/* Sélection campagne */}
+                      {formData.coldEmailMode === 'existing' && (
+                        <div className="ml-10 mt-3">
+                          {emeliaLoading ? (
+                            <div className="flex items-center gap-2 text-gray-400">
+                              <Loader2 size={16} className="animate-spin" />
+                              Chargement des campagnes...
+                            </div>
+                          ) : emeliaCampaigns.length > 0 ? (
+                            <>
+                              <select
+                                value={formData.coldCampaignIdEmelia}
+                                onChange={(e) => setFormData(prev => ({ ...prev, coldCampaignIdEmelia: e.target.value }))}
+                                className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500"
+                              >
+                                <option value="">-- Sélectionner une campagne --</option>
+                                {emeliaCampaigns.map(camp => (
+                                  <option key={camp._id || camp.id} value={camp._id || camp.id}>
+                                    {camp.name} {camp.emailsCount ? `(${camp.emailsCount} emails)` : ''}
+                                  </option>
+                                ))}
+                              </select>
+
+                              {/* 🆕 Preview de la campagne sélectionnée */}
+                              {formData.coldCampaignIdEmelia && (
+                                <div className="mt-3 p-3 bg-blue-900/20 border border-blue-600 rounded-lg">
+                                  {(() => {
+                                    const selected = emeliaCampaigns.find(c =>
+                                      (c._id || c.id) === formData.coldCampaignIdEmelia
+                                    );
+                                    return selected ? (
+                                      <div className="text-sm">
+                                        <p className="text-blue-300 font-medium mb-1">✓ Campagne sélectionnée :</p>
+                                        <p className="text-gray-300">{selected.name}</p>
+                                        {selected.emailsCount && (
+                                          <p className="text-gray-400 text-xs mt-1">
+                                            {selected.emailsCount} emails •
+                                            {selected.status ? ` ${selected.status}` : ''}
+                                          </p>
+                                        )}
+                                      </div>
+                                    ) : null;
+                                  })()}
+                                </div>
+                              )}
+
+                              {/* Bouton rafraîchir */}
+                              <button
+                                type="button"
+                                onClick={() => fetchEmeliaCampaigns()}
+                                disabled={emeliaLoading}
+                                className="mt-2 text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1 transition-colors disabled:opacity-50"
+                              >
+                                <RefreshCw size={14} className={emeliaLoading ? 'animate-spin' : ''} />
+                                Rafraîchir la liste
+                              </button>
+                            </>
+                          ) : (
+                            <div className="space-y-2">
+                              <div className="p-3 bg-yellow-900/20 border border-yellow-600 rounded-lg text-yellow-300 text-sm">
+                                Aucune campagne trouvée dans votre compte Emelia.
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => fetchEmeliaCampaigns()}
+                                disabled={emeliaLoading}
+                                className="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1 transition-colors disabled:opacity-50"
+                              >
+                                <RefreshCw size={14} className={emeliaLoading ? 'animate-spin' : ''} />
+                                Réessayer
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Option: Création automatique */}
+                      <label className={`flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all ${formData.coldEmailMode === 'auto'
+                        ? 'border-blue-500 bg-blue-900/20'
+                        : 'border-gray-600 hover:border-gray-500'
+                        }`}>
+                        <input
+                          type="radio"
+                          name="coldEmailMode"
+                          value="auto"
+                          checked={formData.coldEmailMode === 'auto'}
+                          onChange={(e) => {
+                            setFormData(prev => ({
+                              ...prev,
+                              coldEmailMode: e.target.value,
+                              coldCampaignIdEmelia: ""
+                            }));
+                          }}
+                          className="mt-1 mr-3"
+                        />
+                        <div className="flex-1">
+                          <span className="text-white font-medium">Créer automatiquement</span>
+                          <p className="text-gray-400 text-sm mt-1">
+                            Une nouvelle campagne sera créée automatiquement dans Emelia
+                          </p>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Info si désactivé */}
+            {!formData.coldEmail && (
+              <div className="p-4 bg-blue-900/20 border border-blue-600 rounded-lg">
+                <p className="text-blue-300 text-sm flex items-center gap-2">
+                  <AlertCircle size={16} />
+                  Le cold email est désactivé. Activez-le pour envoyer des emails après vos relances LinkedIn.
+                </p>
+              </div>
+            )}
           </div>
         );
 

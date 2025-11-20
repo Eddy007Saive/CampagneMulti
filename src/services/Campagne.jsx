@@ -37,8 +37,7 @@ export const getCampagnes = async (params = {}) => {
       params: queryParams,
     });
 
-    console.log(response);
-    
+    console.log("dsdsdsdsd",response);
     
 
     // ✅ Ton backend renvoie : success + result.data + pagination
