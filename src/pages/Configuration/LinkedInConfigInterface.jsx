@@ -513,22 +513,46 @@ export function LinkedInConfigInterface() {
         </div>
 
         {/* Save Button */}
-        <div className="flex justify-end">
-          <button
-            onClick={handleSaveConfig}
-            disabled={isSaving || !validationStatus.liAt?.valid || !validationStatus.email?.valid || !config.userId}
-            className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed shadow-sm"
-          >
+<div className="flex justify-end">
+    <button
+        onClick={handleSaveConfig}
+        disabled={
+            isSaving ||
+            !validationStatus.liAt?.valid ||
+            !validationStatus.email?.valid ||
+            !config.userId
+        }
+        className={`
+            relative px-8 py-3 font-poppins font-bold uppercase tracking-wider
+            text-white overflow-hidden group rounded-lg border-0
+            bg-gradient-to-r from-blackcore-rouge via-blue-500 to-cyan-500
+            hover:from-cyan-500 hover:via-blue-500 hover:to-blackcore-rouge
+            transition-all duration-500 shadow-lg hover:shadow-2xl hover:shadow-blackcore-rouge/50
+            disabled:bg-gray-400 disabled:cursor-not-allowed disabled:shadow-none
+        `}
+    >
+        <span className="relative z-10 flex items-center gap-2">
             {isSaving ? (
-              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
             ) : (
-              <Save className="w-5 h-5" />
+                <Save className="w-5 h-5" />
             )}
-            <span className="font-medium">
-              {isSaving ? 'Sauvegarde en cours...' : 'Sauvegarder la Configuration'}
+
+            <span>
+                {isSaving ? "Sauvegarde en cours..." : "Sauvegarder la Configuration"}
             </span>
-          </button>
-        </div>
+        </span>
+
+        {/* Effet balayage futuriste (identique au bouton Rechercher) */}
+        <div className="
+            absolute inset-0 bg-gradient-to-r 
+            from-transparent via-white/20 to-transparent
+            -translate-x-full group-hover:translate-x-full
+            transition-transform duration-700
+        "></div>
+    </button>
+</div>
+
       </div>
     </div>
   );

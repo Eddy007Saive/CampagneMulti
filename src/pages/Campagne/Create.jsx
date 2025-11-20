@@ -29,7 +29,6 @@ import 'react-toastify/dist/ReactToastify.css';
 import toastify from "@/utils/toastify";
 import { useNavigate } from 'react-router-dom';
 
-
 const CampagneSchema = {
   nom: { required: true, minLength: 3 },
   zoneGeographique: { required: true, minLength: 2 },
@@ -37,12 +36,12 @@ const CampagneSchema = {
   seniorite: { required: false },
   tailleEntreprise: { required: false },
   languesParlees: { required: true },
-  secteursSOuhaites: { required: false }, // Maintenant optionnel
+  secteursSOuhaites: { required: false },
   Template_message: { required: true, minLength: 10 },
   profilsParJour: { required: true, min: 1, max: 120 },
   messagesParJour: { required: true, min: 1, max: 40 },
   joursRafraichissement: { required: true, minLength: 1 },
-  relances: { required: true, minLength: 1 } // Nouveau champ
+  relances: { required: true, minLength: 1 }
 };
 
 export function Create() {
@@ -53,6 +52,7 @@ export function Create() {
   const [stepValidationErrors, setStepValidationErrors] = useState({});
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState(null);
+  const [carteSelectionnee, setCarteSelectionnee] = useState('initial');
 
   const [formData, setFormData] = useState({
     nom: "",
@@ -68,10 +68,10 @@ export function Create() {
     profilsParJour: "",
     messagesParJour: "",
     joursRafraichissement: [],
-    relances: [ // Nouveau système de relances
+    relances: [
       {
         id: Date.now(),
-        joursApres: 4,
+        joursApres: "",
         instruction: ""
       }
     ],
@@ -164,9 +164,8 @@ export function Create() {
     }
   ];
 
-  // Templates de relance organisés par timing
   const templatesRelanceParTiming = {
-    court: [ // 1-5 jours
+    court: [
       {
         name: "Rappel Simple",
         content: "Bonjour {Prénom}, je vous écris pour savoir si vous aviez eu l'occasion de voir mon précédent email concernant {Nom de votre solution}. Je serais ravi de planifier un court échange si le sujet vous intéresse."
@@ -184,7 +183,7 @@ export function Create() {
         content: "Bonjour {Prénom}, en relisant votre profil, je me suis demandé si vous aviez besoin d'aide pour {Défi spécifique}. Si c'est le cas, mon email précédent pourrait vous être utile. N'hésitez pas."
       }
     ],
-    moyen: [ // 6-10 jours
+    moyen: [
       {
         name: "Ressource Utile",
         content: "Bonjour {Prénom}, je ne veux pas être insistant, mais j'ai pensé que vous pourriez trouver cet article de blog sur {Sujet pertinent} intéressant. Il aborde les défis que nous avons évoqués dans mon premier email. Cela pourrait vous donner une bonne idée de ce que nous faisons."
@@ -202,7 +201,7 @@ export function Create() {
         content: "Bonjour {Prénom}, si vous êtes trop occupé pour un appel, j'ai préparé une courte vidéo de démonstration de {Nom de votre solution} qui vous montre les fonctionnalités les plus pertinentes pour votre secteur. Vous pouvez la regarder quand vous le souhaitez."
       }
     ],
-    long: [ // 11+ jours
+    long: [
       {
         name: "Clôture Polie",
         content: "Bonjour {Prénom}, je n'ai pas eu de retour de votre part et je ne veux pas que mes messages deviennent des spams dans votre boîte de réception. Je vais clore ce dossier de mon côté, mais si l'idée d'améliorer {Bénéfice Clé} chez {Nom de l'entreprise du prospect} vous intéresse toujours, n'hésitez pas à me répondre."
@@ -233,20 +232,20 @@ export function Create() {
 
   const { register, handleSubmit, reset, setValue, formState: { errors }, watch, trigger, getValues } = methods;
 
-  // Fonctions pour gérer les relances
   const ajouterRelance = () => {
     const nouvelleRelance = {
       id: Date.now(),
       joursApres: "",
       instruction: ""
     };
-    
+
     setFormData(prev => ({
       ...prev,
       relances: [...prev.relances, nouvelleRelance]
     }));
 
-    // Clear error when adding a relance
+    setCarteSelectionnee(nouvelleRelance.id);
+
     if (stepValidationErrors.relances) {
       const newErrors = { ...stepValidationErrors };
       delete newErrors.relances;
@@ -259,7 +258,7 @@ export function Create() {
       toastify.warning("Vous devez avoir au moins une relance configurée");
       return;
     }
-    
+
     setFormData(prev => ({
       ...prev,
       relances: prev.relances.filter(r => r.id !== id)
@@ -269,12 +268,11 @@ export function Create() {
   const modifierRelance = (id, champ, valeur) => {
     setFormData(prev => ({
       ...prev,
-      relances: prev.relances.map(r => 
+      relances: prev.relances.map(r =>
         r.id === id ? { ...r, [champ]: valeur } : r
       )
     }));
 
-    // Clear error when modifying a relance
     if (stepValidationErrors.relances) {
       const newErrors = { ...stepValidationErrors };
       delete newErrors.relances;
@@ -285,11 +283,11 @@ export function Create() {
   const deplacerRelance = (index, direction) => {
     const newRelances = [...formData.relances];
     const newIndex = direction === 'up' ? index - 1 : index + 1;
-    
+
     if (newIndex < 0 || newIndex >= newRelances.length) return;
-    
+
     [newRelances[index], newRelances[newIndex]] = [newRelances[newIndex], newRelances[index]];
-    
+
     setFormData(prev => ({ ...prev, relances: newRelances }));
   };
 
@@ -299,12 +297,10 @@ export function Create() {
     return templatesRelanceParTiming.long;
   };
 
-  // Fonction de validation améliorée
   const validateField = (fieldName, value) => {
     const schema = CampagneSchema[fieldName];
     if (!schema) return null;
 
-    // Validation pour les champs requis
     if (schema.required) {
       if (fieldName === 'joursRafraichissement') {
         if (!value || !Array.isArray(value) || value.length === 0) {
@@ -314,19 +310,17 @@ export function Create() {
         if (!value || !Array.isArray(value) || value.length === 0) {
           return 'Au moins une relance doit être configurée';
         }
-        
-        // Vérifier que chaque relance a un timing et une instruction
+
         for (let i = 0; i < value.length; i++) {
           const relance = value[i];
           if (!relance.joursApres || relance.joursApres <= 0) {
-            return `La relance #${i + 1} doit avoir un délai positif`;
+            return `La relance #${i + 1} : veuillez indiquer un délai`;
           }
-          if (!relance.instruction || relance.instruction.length < 10) {
-            return `La relance #${i + 1} doit avoir une instruction (min 10 caractères)`;
+          if (!relance.instruction || relance.instruction.trim().length < 10) {
+            return `La relance #${i + 1} : le message doit contenir au moins 10 caractères`;
           }
         }
-        
-        // Vérifier qu'il n'y a pas de doublons de timing
+
         const timings = value.map(r => parseInt(r.joursApres));
         if (new Set(timings).size !== timings.length) {
           return 'Deux relances ne peuvent pas avoir le même délai';
@@ -336,12 +330,10 @@ export function Create() {
       }
     }
 
-    // Validation de longueur minimale
     if (schema.minLength && value && value.length < schema.minLength) {
       return `Minimum ${schema.minLength} caractères requis`;
     }
 
-    // Validation des valeurs numériques
     if (schema.min !== undefined && value !== "" && parseInt(value) < schema.min) {
       return `La valeur doit être supérieure ou égale à ${schema.min}`;
     }
@@ -353,13 +345,12 @@ export function Create() {
     return null;
   };
 
-  // Fonction pour obtenir les champs à valider par étape
   const getFieldsForStep = (step) => {
     switch (step) {
       case 0:
         return ['nom', 'zoneGeographique'];
       case 1:
-        return ['posteRecherche', 'languesParlees']; // secteursSOuhaites retiré car optionnel
+        return ['posteRecherche', 'languesParlees'];
       case 2:
         return ['profilsParJour', 'messagesParJour', 'joursRafraichissement'];
       case 3:
@@ -369,7 +360,6 @@ export function Create() {
     }
   };
 
-  // Récupérer l'utilisateur depuis le localStorage
   useEffect(() => {
     const getUserFromStorage = () => {
       try {
@@ -392,7 +382,6 @@ export function Create() {
     getUserFromStorage();
   }, []);
 
-  // Validation améliorée par étape
   const validateCurrentStep = () => {
     const fieldsToValidate = getFieldsForStep(currentStep);
     const currentErrors = {};
@@ -421,7 +410,6 @@ export function Create() {
 
     setValue(name, value, { shouldValidate: true });
 
-    // Clear error for this field when user starts typing
     if (stepValidationErrors[name]) {
       const newErrors = { ...stepValidationErrors };
       delete newErrors[name];
@@ -436,7 +424,6 @@ export function Create() {
 
     setFormData(prev => ({ ...prev, joursRafraichissement: nouveauxJours }));
 
-    // Clear error when user makes a selection
     if (stepValidationErrors.joursRafraichissement) {
       const newErrors = { ...stepValidationErrors };
       delete newErrors.joursRafraichissement;
@@ -447,7 +434,6 @@ export function Create() {
   const appliquerPlanningPredefini = (planning) => {
     setFormData(prev => ({ ...prev, joursRafraichissement: planning.jours }));
 
-    // Clear error when applying predefined schedule
     if (stepValidationErrors.joursRafraichissement) {
       const newErrors = { ...stepValidationErrors };
       delete newErrors.joursRafraichissement;
@@ -473,19 +459,27 @@ export function Create() {
   const onSubmit = async (data) => {
     setIsSubmitting(true);
     try {
-      // Vérifier les relances avant l'envoi
+      const relancesIncompletes = formData.relances.filter(r => 
+        !r.joursApres || 
+        !r.instruction || 
+        r.instruction.trim().length < 10
+      );
       
-      // Nettoyer les relances (enlever les IDs temporaires et trier par délai)
+      if (relancesIncompletes.length > 0) {
+        toastify.error(`${relancesIncompletes.length} relance(s) incomplète(s). Veuillez remplir tous les champs.`);
+        setIsSubmitting(false);
+        return;
+      }
+
       const relancesClean = formData.relances
-        .filter(r => r.joursApres && r.instruction) // Garder seulement les relances complètes
         .map(r => ({
           joursApres: parseInt(r.joursApres),
-          instruction: r.instruction
+          instruction: r.instruction.trim()
         }))
-        .sort((a, b) => a.joursApres - b.joursApres); // Trier par délai croissant
-      
-      
-      // Préparer les données pour Airtable
+        .sort((a, b) => a.joursApres - b.joursApres);
+
+      console.log('Relances à enregistrer:', relancesClean);
+
       const campagneData = {
         "Nom de la campagne": formData.nom,
         "Poste recherché": formData.posteRecherche,
@@ -493,7 +487,7 @@ export function Create() {
         "Seniorite": formData.seniorite,
         "Taille_entreprise": formData.tailleEntreprise,
         "Langues parlées": formData.languesParlees,
-        "Secteurs souhaités": formData.secteursSOuhaites || "", // Optionnel
+        "Secteurs souhaités": formData.secteursSOuhaites || "",
         "Contacts": formData.contacts,
         "Statut": formData.statut,
         "Template_message": formData.Template_message,
@@ -501,10 +495,11 @@ export function Create() {
         "Messages/jour": parseInt(formData.messagesParJour),
         "Jours_enrichissement": formData.joursRafraichissement,
         "Statut d'enrichissement": "En attente",
-        "Relances": JSON.stringify(relancesClean), // Convertir le tableau nettoyé en JSON
+        "Relances": JSON.stringify(relancesClean),
         "Users": [formData.Users]
       };
 
+      console.log('Données campagne à envoyer:', campagneData);
 
       const response = await createCampagne(campagneData);
       toastify.success(response.message || "Campagne créée avec succès");
@@ -526,7 +521,7 @@ export function Create() {
         joursRafraichissement: [],
         relances: [{
           id: Date.now(),
-          joursApres: 4,
+          joursApres: "",
           instruction: ""
         }],
         Users: formData.Users
@@ -577,10 +572,11 @@ export function Create() {
 
         return (
           <div key={step.id} className="flex flex-col items-center flex-1">
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${isActive ? 'bg-blue-600 text-white' :
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${
+              isActive ? 'bg-blue-600 text-white' :
               isCompleted ? 'bg-green-600 text-white' :
-                'bg-gray-300 text-gray-600'
-              }`}>
+              'bg-gray-300 text-gray-600'
+            }`}>
               {isCompleted ? <Check size={16} /> : <Icon size={16} />}
             </div>
             <span className={`text-sm mt-2 text-center ${isActive ? 'text-blue-600 font-semibold' : 'text-gray-600'}`}>
@@ -610,8 +606,9 @@ export function Create() {
                   value={formData.nom}
                   name="nom"
                   type="text"
-                  className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${stepValidationErrors.nom ? 'border-red-500' : 'border-gray-300'
-                    }`}
+                  className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${
+                    stepValidationErrors.nom ? 'border-red-500' : 'border-gray-300'
+                  }`}
                   onChange={handleChange}
                   placeholder="Ex: Recrutement Développeur Senior - Mars 2025"
                 />
@@ -632,8 +629,9 @@ export function Create() {
                   value={formData.zoneGeographique}
                   name="zoneGeographique"
                   type="text"
-                  className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${stepValidationErrors.zoneGeographique ? 'border-red-500' : 'border-gray-300'
-                    }`}
+                  className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${
+                    stepValidationErrors.zoneGeographique ? 'border-red-500' : 'border-gray-300'
+                  }`}
                   onChange={handleChange}
                   placeholder="Paris, France"
                 />
@@ -665,8 +663,9 @@ export function Create() {
                   value={formData.posteRecherche}
                   name="posteRecherche"
                   type="text"
-                  className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${stepValidationErrors.posteRecherche ? 'border-red-500' : 'border-gray-300'
-                    }`}
+                  className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${
+                    stepValidationErrors.posteRecherche ? 'border-red-500' : 'border-gray-300'
+                  }`}
                   onChange={handleChange}
                   placeholder="Ex: Développeur OR Developer AND Senior"
                 />
@@ -768,8 +767,9 @@ export function Create() {
                   value={formData.languesParlees}
                   onChange={handleChange}
                   placeholder="Sélectionner ou saisir une langue"
-                  className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${stepValidationErrors.languesParlees ? 'border-red-500' : 'border-gray-300'
-                    }`}
+                  className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${
+                    stepValidationErrors.languesParlees ? 'border-red-500' : 'border-gray-300'
+                  }`}
                 />
                 <datalist id="langues-list">
                   {langues.map((langue) => (
@@ -826,8 +826,9 @@ export function Create() {
                   type="number"
                   min="1"
                   max="120"
-                  className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${stepValidationErrors.profilsParJour ? 'border-red-500' : 'border-gray-300'
-                    }`}
+                  className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${
+                    stepValidationErrors.profilsParJour ? 'border-red-500' : 'border-gray-300'
+                  }`}
                   onChange={handleChange}
                   placeholder="Ex: 20"
                 />
@@ -854,8 +855,9 @@ export function Create() {
                   type="number"
                   min="1"
                   max="40"
-                  className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${stepValidationErrors.messagesParJour ? 'border-red-500' : 'border-gray-300'
-                    }`}
+                  className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${
+                    stepValidationErrors.messagesParJour ? 'border-red-500' : 'border-gray-300'
+                  }`}
                   onChange={handleChange}
                   placeholder="Ex: 15"
                 />
@@ -908,16 +910,18 @@ export function Create() {
                       key={jour.id}
                       type="button"
                       onClick={() => handleJourToggle(jour.id)}
-                      className={`relative p-3 rounded-lg border-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 ${formData.joursRafraichissement.includes(jour.id)
-                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
-                        : 'border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-white dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-500'
-                        }`}
+                      className={`relative p-3 rounded-lg border-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                        formData.joursRafraichissement.includes(jour.id)
+                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+                          : 'border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-white dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-500'
+                      }`}
                     >
                       <div className="text-center">
-                        <div className={`w-8 h-8 mx-auto rounded-full flex items-center justify-center text-sm font-semibold mb-1 ${formData.joursRafraichissement.includes(jour.id)
-                          ? 'bg-blue-500 text-white'
-                          : 'bg-gray-100 dark:bg-gray-600 text-gray-600 dark:text-gray-300'
-                          }`}>
+                        <div className={`w-8 h-8 mx-auto rounded-full flex items-center justify-center text-sm font-semibold mb-1 ${
+                          formData.joursRafraichissement.includes(jour.id)
+                            ? 'bg-blue-500 text-white'
+                            : 'bg-gray-100 dark:bg-gray-600 text-gray-600 dark:text-gray-300'
+                        }`}>
                           {jour.short}
                         </div>
                         <span className="text-xs">{jour.label}</span>
@@ -961,241 +965,284 @@ export function Create() {
       case 3:
         return (
           <div className="space-y-6">
-            {/* Template de message initial */}
-            <div>
-              <label className="flex items-center mb-2 text-sm font-medium text-white dark:text-gray-300">
-                <MessageSquare size={16} className="mr-2" />
-                Template de message initial *
-                <Tooltip content="Utilisez {nom}, {poste}, {Entreprise} comme variables dynamiques">
-                  <HelpCircle size={14} className="ml-2 text-gray-400 cursor-help" />
-                </Tooltip>
-              </label>
-
-              <div className="mb-4">
-                <div className="flex gap-2 mb-2 flex-wrap">
-                  {messageTemplates.map((template, index) => (
-                    <button
-                      key={index}
-                      type="button"
-                      onClick={() => setFormData(prev => ({ ...prev, Template_message: template.content }))}
-                      className="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-700 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-                    >
-                      {template.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <textarea
-                value={formData.Template_message}
-                name="Template_message"
-                rows={6}
-                className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${stepValidationErrors.Template_message ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                onChange={handleChange}
-                placeholder="Bonjour {nom}, j'espère que vous allez bien. Je recrute actuellement pour un poste de {poste}..."
-              />
-              {stepValidationErrors.Template_message && (
-                <p className="text-red-500 text-xs mt-1 flex items-center">
-                  <AlertCircle size={12} className="mr-1" />
-                  {stepValidationErrors.Template_message.message}
-                </p>
-              )}
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-semibold text-white flex items-center">
+                <MessageSquare size={20} className="mr-2" />
+                Votre séquence de messages LinkedIn
+              </h3>
+              <span className="text-sm text-gray-400">
+                {formData.relances.length + 1} étape{formData.relances.length > 0 ? 's' : ''} créée{formData.relances.length > 0 ? 's' : ''}
+              </span>
             </div>
 
-            {/* Section Relances Dynamiques */}
-            <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 flex items-center">
-                  <RefreshCw size={20} className="mr-2" />
-                  Messages de Relance ({formData.relances.length})
-                </h3>
-                <button
-                  type="button"
-                  onClick={ajouterRelance}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  <Plus size={16} />
-                  Ajouter une relance
-                </button>
+            {stepValidationErrors.Template_message && (
+              <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+                <p className="text-red-700 dark:text-red-300 text-sm flex items-center">
+                  <AlertCircle size={16} className="mr-2" />
+                  {stepValidationErrors.Template_message.message}
+                </p>
               </div>
+            )}
 
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                Configurez vos messages de relance avec les délais personnalisés. Les templates suggérés s'adaptent automatiquement au timing choisi.
-              </p>
+            {stepValidationErrors.relances && (
+              <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+                <p className="text-red-700 dark:text-red-300 text-sm flex items-center">
+                  <AlertCircle size={16} className="mr-2" />
+                  {stepValidationErrors.relances.message}
+                </p>
+              </div>
+            )}
 
-              {stepValidationErrors.relances && (
-                <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
-                  <p className="text-red-700 dark:text-red-300 text-sm flex items-center">
-                    <AlertCircle size={16} className="mr-2" />
-                    {stepValidationErrors.relances.message}
-                  </p>
-                </div>
-              )}
-
-              {/* Liste des relances */}
-              <div className="space-y-4">
-                {formData.relances.map((relance, index) => (
-                  <div
-                    key={relance.id}
-                    className="p-4 border-2 border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800"
+            <div className="relative">
+              <div className="flex gap-4 overflow-x-auto pb-6 px-2">
+                <div className="flex-shrink-0 w-48">
+                  <button
+                    type="button"
+                    onClick={() => setCarteSelectionnee('initial')}
+                    className={`w-full relative rounded-lg p-4 transition-all duration-200 shadow-lg cursor-pointer ${
+                      carteSelectionnee === 'initial'
+                        ? 'bg-gray-800 border-2 border-blue-500'
+                        : 'bg-gray-800 border-2 border-gray-700 hover:border-blue-400'
+                    }`}
                   >
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-3">
-                        <span className="flex items-center justify-center w-8 h-8 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full font-semibold">
-                          {index + 1}
-                        </span>
-                        <h4 className="font-medium text-gray-800 dark:text-gray-200">
-                          Relance #{index + 1}
-                        </h4>
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center">
+                        <MessageSquare size={20} className="text-white" />
                       </div>
-                      <div className="flex items-center gap-2">
-                        {index > 0 && (
-                          <button
-                            type="button"
-                            onClick={() => deplacerRelance(index, 'up')}
-                            className="p-1 text-gray-500 hover:text-blue-600 transition-colors"
-                            title="Déplacer vers le haut"
-                          >
-                            <MoveUp size={16} />
-                          </button>
+                      <span className="text-white font-semibold text-sm">Étape 1</span>
+                      <span className="text-gray-400 text-xs">Message initial</span>
+                    </div>
+                    {formData.Template_message && formData.Template_message.length >= 10 && (
+                      <div className="mt-2 text-center">
+                        <span className="text-xs text-green-400">✓ Configuré</span>
+                      </div>
+                    )}
+                  </button>
+                </div>
+
+                {formData.relances.length > 0 && (
+                  <div className="flex-shrink-0 flex items-center justify-center">
+                    <div className="flex items-center">
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      <div className="w-8 h-0.5 bg-gradient-to-r from-green-500 to-blue-500"></div>
+                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                    </div>
+                  </div>
+                )}
+
+                {formData.relances.map((relance, index) => (
+                  <React.Fragment key={relance.id}>
+                    <div className="flex-shrink-0 w-48">
+                      <button
+                        type="button"
+                        onClick={() => setCarteSelectionnee(relance.id)}
+                        className={`w-full relative rounded-lg p-4 transition-all duration-200 shadow-lg cursor-pointer ${
+                          carteSelectionnee === relance.id
+                            ? 'bg-gray-800 border-2 border-blue-500'
+                            : 'bg-gray-800 border-2 border-gray-700 hover:border-blue-400'
+                        }`}
+                      >
+                        <div className="flex flex-col items-center gap-2">
+                          <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center">
+                            <Clock size={20} className="text-white" />
+                          </div>
+                          <span className="text-white font-semibold text-sm">Étape {index + 2}</span>
+                          <span className="text-gray-400 text-xs">
+                            {relance.joursApres ? `Attendre ${relance.joursApres} jour${relance.joursApres > 1 ? 's' : ''}` : 'À configurer'}
+                          </span>
+                        </div>
+                        {relance.joursApres && relance.instruction && relance.instruction.length >= 10 && (
+                          <div className="mt-2 text-center">
+                            <span className="text-xs text-green-400">✓ Configuré</span>
+                          </div>
                         )}
-                        {index < formData.relances.length - 1 && (
-                          <button
-                            type="button"
-                            onClick={() => deplacerRelance(index, 'down')}
-                            className="p-1 text-gray-500 hover:text-blue-600 transition-colors"
-                            title="Déplacer vers le bas"
-                          >
-                            <MoveDown size={16} />
-                          </button>
-                        )}
+                        
                         <button
                           type="button"
-                          onClick={() => supprimerRelance(relance.id)}
-                          className="p-1 text-red-500 hover:text-red-700 transition-colors"
-                          title="Supprimer"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            supprimerRelance(relance.id);
+                            if (carteSelectionnee === relance.id) {
+                              setCarteSelectionnee('initial');
+                            }
+                          }}
+                          className="absolute top-2 right-2 p-1 text-red-400 hover:text-red-600 hover:bg-red-900/20 rounded transition-colors"
                         >
-                          <Trash2 size={16} />
+                          <Trash2 size={14} />
                         </button>
-                      </div>
+                      </button>
                     </div>
 
-                    {/* Champ délai */}
-                    <div className="mb-3">
-                      <label className="flex items-center mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                        <Clock size={14} className="mr-1" />
-                        Délai après le premier message (jours)
-                      </label>
-                      <input
-                        type="number"
-                        min="1"
-                        value={relance.joursApres}
-                        onChange={(e) => modifierRelance(relance.id, 'joursApres', e.target.value)}
-                        className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                        placeholder="Ex: 4, 7, 14..."
-                      />
-                    </div>
-
-                    {/* Templates suggérés basés sur le timing */}
-                    {relance.joursApres && (
-                      <div className="mb-3">
-                        <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
-                          Templates suggérés pour {relance.joursApres} jour{relance.joursApres > 1 ? 's' : ''} :
-                        </p>
-                        <div className="flex gap-2 flex-wrap">
-                          {getTemplatesSuggeres(parseInt(relance.joursApres)).map((template, tIndex) => (
-                            <button
-                              key={tIndex}
-                              type="button"
-                              onClick={() => modifierRelance(relance.id, 'instruction', template.content)}
-                              className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                            >
-                              {template.name}
-                            </button>
-                          ))}
+                    {index < formData.relances.length - 1 && (
+                      <div className="flex-shrink-0 flex items-center justify-center">
+                        <div className="flex items-center">
+                          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                          <div className="w-8 h-0.5 bg-gradient-to-r from-green-500 to-blue-500"></div>
+                          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                         </div>
                       </div>
                     )}
-
-                    {/* Champ instruction */}
-                    <div>
-                      <label className="flex items-center mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                        <MessageSquare size={14} className="mr-1" />
-                        Instruction / Template
-                      </label>
-                      <textarea
-                        value={relance.instruction}
-                        onChange={(e) => modifierRelance(relance.id, 'instruction', e.target.value)}
-                        rows={4}
-                        className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                        placeholder="Bonjour {Prénom}, je reviens vers vous concernant..."
-                      />
-                      <p className="text-xs text-gray-500 mt-1">
-                        {relance.instruction.length} caractères (minimum 10)
-                      </p>
-                    </div>
-                  </div>
+                  </React.Fragment>
                 ))}
+
+                <div className="flex-shrink-0 w-48">
+                  <button
+                    type="button"
+                    onClick={ajouterRelance}
+                    className="w-full h-full min-h-[140px] border-2 border-dashed border-gray-600 rounded-lg hover:border-blue-500 hover:bg-blue-900/10 transition-all flex flex-col items-center justify-center gap-2 text-gray-400 hover:text-blue-400"
+                  >
+                    <div className="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center">
+                      <Plus size={20} />
+                    </div>
+                    <span className="font-medium text-sm">Ajouter</span>
+                  </button>
+                </div>
               </div>
             </div>
 
-            {/* Résumé de la campagne */}
-            <div className="p-6 bg-gray-50 dark:bg-gray-800 rounded-lg border-t border-gray-200 dark:border-gray-700">
-              <h3 className="text-lg font-semibold mb-4 text-gray-800 dark:text-gray-200 flex items-center">
-                <Eye size={20} className="mr-2" />
-                Résumé de la campagne
-              </h3>
-              <div className="grid gap-3 text-sm">
-                <div><strong className="text-gray-700 dark:text-gray-300">Nom:</strong> <span className="text-gray-600 dark:text-gray-400">{formData.nom || "Non défini"}</span></div>
-                <div><strong className="text-gray-700 dark:text-gray-300">Poste:</strong> <span className="text-gray-600 dark:text-gray-400">{formData.posteRecherche || "Non défini"}</span></div>
-                <div><strong className="text-gray-700 dark:text-gray-300">Zone:</strong> <span className="text-gray-600 dark:text-gray-400">{formData.zoneGeographique || "Non défini"}</span></div>
-                <div><strong className="text-gray-700 dark:text-gray-300">Profils/jour:</strong> <span className="text-gray-600 dark:text-gray-400">{formData.profilsParJour || "Non défini"}</span></div>
-                <div><strong className="text-gray-700 dark:text-gray-300">Messages/jour:</strong> <span className="text-gray-600 dark:text-gray-400">{formData.messagesParJour || "Non défini"}</span></div>
-                <div><strong className="text-gray-700 dark:text-gray-300">Jours actifs:</strong> <span className="text-gray-600 dark:text-gray-400">{
-                  formData.joursRafraichissement.length > 0
-                    ? formData.joursRafraichissement.map(jour =>
-                      joursOptions.find(j => j.id === jour)?.label
-                    ).join(', ')
-                    : "Non défini"
-                }</span></div>
-                {formData.languesParlees && <div><strong className="text-gray-700 dark:text-gray-300">Langues:</strong> <span className="text-gray-600 dark:text-gray-400">{formData.languesParlees}</span></div>}
-                {formData.secteursSOuhaites && <div><strong className="text-gray-700 dark:text-gray-300">Secteurs:</strong> <span className="text-gray-600 dark:text-gray-400">{formData.secteursSOuhaites}</span></div>}
+            <div className="mt-8 p-6 bg-gray-800 rounded-lg border-2 border-gray-700">
+              {carteSelectionnee === 'initial' ? (
+                <>
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="text-white font-semibold flex items-center gap-2">
+                      <MessageSquare size={18} className="text-blue-400" />
+                      Message initial
+                    </h4>
+                  </div>
 
-                {/* Résumé des relances */}
-                <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
-                  <strong className="text-gray-700 dark:text-gray-300">Relances configurées ({formData.relances.length}):</strong>
-                  <div className="mt-2 space-y-1 text-sm">
-                    {formData.relances
-                      .sort((a, b) => (a.joursApres || 0) - (b.joursApres || 0))
-                      .map((relance, index) => (
-                        <div key={relance.id} className="flex items-center gap-2">
-                          <span className="text-blue-600 dark:text-blue-400">•</span>
-                          <span className="text-gray-600 dark:text-gray-400">
-                            Après {relance.joursApres || '?'} jour{(relance.joursApres || 0) > 1 ? 's' : ''} : 
-                            {relance.instruction ? ' Configuré ✓' : ' À compléter'}
-                          </span>
-                        </div>
+                  <div className="mb-4">
+                    <label className="text-xs text-gray-400 mb-2 block">
+                      Templates suggérés :
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      {messageTemplates.map((template, index) => (
+                        <button
+                          key={index}
+                          type="button"
+                          onClick={() => {
+                            setFormData(prev => ({ ...prev, Template_message: template.content }));
+                            if (stepValidationErrors.Template_message) {
+                              const newErrors = { ...stepValidationErrors };
+                              delete newErrors.Template_message;
+                              setStepValidationErrors(newErrors);
+                            }
+                          }}
+                          className="px-3 py-1.5 text-xs bg-gray-700 hover:bg-gray-600 rounded transition-colors text-gray-300"
+                        >
+                          {template.name}
+                        </button>
                       ))}
+                    </div>
                   </div>
-                </div>
-              </div>
 
-              {/* Estimation de l'activité */}
-              {formData.joursRafraichissement.length > 0 && formData.profilsParJour && formData.messagesParJour && (
-                <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                  <h4 className="font-semibold text-blue-800 dark:text-blue-200 mb-2">Estimation hebdomadaire :</h4>
-                  <div className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
-                    <div>• {formData.joursRafraichissement.length * parseInt(formData.profilsParJour || 0)} nouveaux profils par semaine</div>
-                    <div>• {formData.joursRafraichissement.length * parseInt(formData.messagesParJour || 0)} messages envoyés par semaine</div>
-                    <div>• Campagne active {formData.joursRafraichissement.length} jour{formData.joursRafraichissement.length > 1 ? 's' : ''} par semaine</div>
-                    <div>• {formData.relances.length} relance{formData.relances.length > 1 ? 's' : ''} programmée{formData.relances.length > 1 ? 's' : ''}</div>
+                  <textarea
+                    value={formData.Template_message}
+                    name="Template_message"
+                    onChange={handleChange}
+                    rows={6}
+                    placeholder="Bonjour {Prénom}, j'espère que vous allez bien..."
+                    className="w-full bg-gray-900 border border-gray-600 rounded px-4 py-3 text-white focus:border-blue-500 focus:outline-none resize-none placeholder-gray-500"
+                  />
+                  <div className="text-xs text-gray-500 mt-2">
+                    {formData.Template_message?.length || 0} caractères (minimum 10)
                   </div>
-                </div>
+                </>
+              ) : (
+                <>
+                  {(() => {
+                    const relance = formData.relances.find(r => r.id === carteSelectionnee);
+                    const relanceIndex = formData.relances.findIndex(r => r.id === carteSelectionnee);
+                    if (!relance) return null;
+
+                    return (
+                      <>
+                        <div className="flex items-center justify-between mb-4">
+                          <h4 className="text-white font-semibold flex items-center gap-2">
+                            <Clock size={18} className="text-purple-400" />
+                            Relance {relanceIndex + 1}
+                          </h4>
+                          <div className="flex items-center gap-2">
+                            {relanceIndex > 0 && (
+                              <button
+                                type="button"
+                                onClick={() => deplacerRelance(relanceIndex, 'up')}
+                                className="p-1.5 text-gray-400 hover:text-blue-400 transition-colors"
+                                title="Déplacer vers le haut"
+                              >
+                                <MoveUp size={16} />
+                              </button>
+                            )}
+                            {relanceIndex < formData.relances.length - 1 && (
+                              <button
+                                type="button"
+                                onClick={() => deplacerRelance(relanceIndex, 'down')}
+                                className="p-1.5 text-gray-400 hover:text-blue-400 transition-colors"
+                                title="Déplacer vers le bas"
+                              >
+                                <MoveDown size={16} />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="mb-4">
+                          <label className="text-xs text-gray-400 mb-2 block">
+                            Délai d'attente
+                          </label>
+                          <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-900/30 border border-blue-600 rounded-lg">
+                            <Clock size={16} className="text-blue-400" />
+                            <span className="text-blue-300">Attendre</span>
+                            <input
+                              type="number"
+                              min="1"
+                              value={relance.joursApres}
+                              onChange={(e) => modifierRelance(relance.id, 'joursApres', e.target.value)}
+                              className="w-16 bg-gray-900 border border-blue-500 rounded text-blue-300 text-center focus:outline-none focus:border-blue-400 px-2 py-1"
+                              placeholder="2"
+                            />
+                            <span className="text-blue-300">jour{relance.joursApres > 1 ? 's' : ''}</span>
+                          </div>
+                        </div>
+
+                        {relance.joursApres && (
+                          <div className="mb-4">
+                            <label className="text-xs text-gray-400 mb-2 block">
+                              Templates suggérés pour {relance.joursApres} jour{relance.joursApres > 1 ? 's' : ''} :
+                            </label>
+                            <div className="flex flex-wrap gap-2">
+                              {getTemplatesSuggeres(parseInt(relance.joursApres)).map((template, tIndex) => (
+                                <button
+                                  key={tIndex}
+                                  type="button"
+                                  onClick={() => modifierRelance(relance.id, 'instruction', template.content)}
+                                  className="px-3 py-1.5 text-xs bg-gray-700 hover:bg-gray-600 rounded transition-colors text-gray-300"
+                                >
+                                  {template.name}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        <textarea
+                          value={relance.instruction}
+                          onChange={(e) => modifierRelance(relance.id, 'instruction', e.target.value)}
+                          rows={6}
+                          placeholder="Bonjour {Prénom}, je reviens vers vous..."
+                          className="w-full bg-gray-900 border border-gray-600 rounded px-4 py-3 text-white focus:border-blue-500 focus:outline-none resize-none placeholder-gray-500"
+                        />
+                        <div className="text-xs text-gray-500 mt-2">
+                          {relance.instruction?.length || 0} caractères (minimum 10)
+                        </div>
+                      </>
+                    );
+                  })()}
+                </>
               )}
             </div>
           </div>
         );
+
       default:
         return null;
     }
@@ -1210,7 +1257,10 @@ export function Create() {
           </h1>
           <button
             onClick={() => setDarkMode(!darkMode)}
-            className="p-2 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+            className="p-2 rounded-lg bg-gradient-to-r from-blackcore-rouge via-blue-500 to-cyan-500
+            hover:from-cyan-500 hover:via-blue-500 hover:to-blackcore-rouge
+            transition-all duration-500 shadow-lg hover:shadow-2xl hover:shadow-blackcore-rouge/50
+            disabled:bg-gray-400 disabled:cursor-not-allowed disabled:shadow-none"
           >
             {darkMode ? <Sun size={20} /> : <Moon size={20} />}
           </button>
@@ -1240,7 +1290,10 @@ export function Create() {
                     <button
                       type="button"
                       onClick={handleNextStep}
-                      className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                      className="px-6 py-3  bg-gradient-to-r from-blackcore-rouge rounded-lg via-blue-500 to-cyan-500
+            hover:from-cyan-500 hover:via-blue-500 hover:to-blackcore-rouge
+            transition-all duration-500 shadow-lg hover:shadow-2xl hover:shadow-blackcore-rouge/50
+            disabled:bg-gray-400 disabled:cursor-not-allowed disabled:shadow-none "
                     >
                       Suivant
                     </button>
@@ -1249,7 +1302,10 @@ export function Create() {
                       type="button"
                       onClick={() => handleSubmit(onSubmit)()}
                       disabled={isSubmitting}
-                      className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      className="flex items-center rounded-lg  gap-2 px-6 py-3 bg-gradient-to-r from-blackcore-rouge via-blue-500 to-cyan-500
+            hover:from-cyan-500 hover:via-blue-500 hover:to-blackcore-rouge
+            transition-all duration-500 shadow-lg hover:shadow-2xl hover:shadow-blackcore-rouge/50
+            disabled:bg-gray-400 disabled:cursor-not-allowed disabled:shadow-none"
                     >
                       {isSubmitting ? (
                         <>

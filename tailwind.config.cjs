@@ -12,7 +12,7 @@ module.exports = withMT({
         'bleu-fonce': '#0B1030',
         'noir-absolu': '#000000',
         'blanc-pur': '#FFFFFF',
-        
+
         // Variantes pour plus de flexibilité
         primary: {
           50: '#E6F9FF',
@@ -49,7 +49,9 @@ module.exports = withMT({
         'gradient-background': 'linear-gradient(to right, #0B1030, #000000)',
       },
       fontFamily: {
-        // Ajoutez vos polices personnalisées si nécessaire
+        poppins: ["Poppins", "sans-serif"],
+        orbitron: ["Orbitron", "sans-serif"],
+        inter: ["Inter", "sans-serif"],
       },
       animation: {
         // Animations personnalisées pour l'effet néon
