@@ -77,25 +77,29 @@ import 'react-toastify/dist/ReactToastify.css';
 import { ToastContainer } from 'react-toastify';
 import Loading from "@/components/Loading";
 
-const SERVER_URL = 'https://serverrecrutement.onrender.com';
+const SERVER_URL = import.meta.env.VITE_BASE_URL
 // Hook personnalisé pour les Server-Sent Events
 const useSSE = () => {
   const [events, setEvents] = useState([]);
   const [isConnected, setIsConnected] = useState(false);
-
   const connectToWorkflow = async (endpoint, payload) => {
     try {
       setIsConnected(true);
       setEvents([]);
-
+      
+      const token = localStorage.getItem("accessToken");
       const response = await fetch(`${SERVER_URL}${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'text/event-stream',
+          ...(token && { 'Authorization': `Bearer ${token}` }),
         },
         body: JSON.stringify(payload),
       });
+
+      console.log(response);
+      
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
@@ -138,6 +142,8 @@ const useSSE = () => {
 
       readStream();
     } catch (error) {
+      console.log(error);
+      
       setIsConnected(false);
       setEvents(prev => [...prev, {
         id: Date.now(),

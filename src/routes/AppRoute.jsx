@@ -1,4 +1,3 @@
-// src/routes/AppRoute.jsx
 import { Routes, Route, Navigate } from "react-router-dom";
 import { Dashboard, Auth } from "@/layouts";
 import { Home } from "@/pages/dashboard/home";
@@ -21,17 +20,19 @@ import {
 import { SignIn, SignUp } from "@/pages/auth";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { PublicRoute } from "@/components/PublicRoute";
-import { RootRedirect } from "@/components/RootRedirect";
+import { useConfigurationCheck as RequireConfiguration  } from "@/hooks/useConfigurationCheck";
 
 export function AppRoute() {
   return (
     <Routes>
-      {/* Routes Dashboard - PROTÉGÉES (accessible uniquement si connecté) */}
+      {/* Routes Dashboard - PROTÉGÉES + VÉRIFICATION CONFIG */}
       <Route
         path="/dashboard"
         element={
           <ProtectedRoute>
-            <Dashboard />
+            <RequireConfiguration>
+              <Dashboard />
+            </RequireConfiguration>
           </ProtectedRoute>
         }
       >
@@ -41,7 +42,10 @@ export function AppRoute() {
         <Route path="campagne/contacts/create/:campaignId" element={<NewContact />} />
         <Route path="contacts" element={<Contacts />} />
         <Route path="campagne/:id" element={<CampaignDetailDashboard />} />
+        
+        {/* Page de configuration - accessible sans vérification */}
         <Route path="configuration" element={<LinkedInConfigInterface />} />
+        
         <Route path="campagne/contacts/:id" element={<CampaignContactsInterface />} />
         <Route path="campagne/edit/:id" element={<EditCampaign />} />
         <Route path="guide" element={<UserGuideInterface />} />
@@ -49,7 +53,7 @@ export function AppRoute() {
         <Route index element={<Navigate to="home" replace />} />
       </Route>
 
-      {/* Routes Auth - PUBLIQUES (accessible uniquement si NON connecté) */}
+      {/* Routes Auth - PUBLIQUES */}
       <Route
         path="/auth"
         element={
@@ -63,7 +67,7 @@ export function AppRoute() {
         <Route index element={<Navigate to="sign-in" replace />} />
       </Route>
 
-      {/* Redirection globale - Dépend de l'état de connexion */}
+      {/* Redirections globales */}
       <Route 
         path="/" 
         element={<Navigate to="/dashboard/home" replace />} 
