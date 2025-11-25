@@ -458,7 +458,6 @@ export function CampaignDetailDashboard() {
       await connectToWorkflow('/webhook/profils/retrier/profils', {
         id: campaignId
       });
-      toastify.success(`Retri lancé pour ${totalProcessed} profils`);
       const contactsResponse = await getContactsByCampaignId(campaignId);
       const contacts = contactsResponse.data || [];
       setContactsData(contacts);

@@ -28,6 +28,7 @@ import { ToastContainer } from "react-toastify";
 import 'react-toastify/dist/ReactToastify.css';
 import toastify from "@/utils/toastify";
 import { emeliaService } from "@/services/Emelia";
+import Loading from "@/components/Loading";
 
 const CampagneSchema = {
   nom: { required: true, minLength: 3 },
@@ -1665,19 +1666,15 @@ export function EditCampaign() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-900 to-gray-900">
-        <div className="text-center">
-          <Loader2 size={48} className="animate-spin text-blue-400 mx-auto mb-4" />
-          <p className="text-white text-lg">Chargement de la campagne...</p>
-        </div>
-      </div>
+      <Loading/>
+      
     );
   }
 
   return (
-    <div className={`min-h-screen transition-colors duration-300 ${darkMode ? 'dark bg-gray-900' : 'bg-gradient-to-br from-blue-900 to-gray-900'}`}>
+    <div className={`min-h-screen transition-colors duration-300 `}>
       <div className="container mx-auto p-6">
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex justify-between items-center mb-8 ">
           <div className="flex items-center gap-4">
             <button
               onClick={() => navigate(-1)}
@@ -1698,7 +1695,7 @@ export function EditCampaign() {
         </div>
 
         <div className="max-w-5xl mx-auto">
-          <div className="bg-gradient-to-br from-blue-900/90 to-gray-900/80 dark:bg-gray-800 rounded-xl shadow-lg p-8">
+          <div className="bg-gradient-to-br from-bleu-fonce/90 to-noir-absolu/80  rounded-xl shadow-lg p-8">
             <StepIndicator />
 
             <div>
@@ -1720,7 +1717,10 @@ export function EditCampaign() {
                   <button
                     type="button"
                     onClick={() => setCurrentStep(currentStep + 1)}
-                    className="px-6 py-3 bg-gradient-to-r from-red-500 via-blue-500 to-cyan-500 hover:from-cyan-500 hover:via-blue-500 hover:to-red-500 transition-all duration-500 shadow-lg hover:shadow-2xl hover:shadow-red-500/50 text-white rounded-lg"
+                    className="px-6 py-3  bg-gradient-to-r from-blackcore-rouge rounded-lg via-blue-500 to-cyan-500
+            hover:from-cyan-500 hover:via-blue-500 hover:to-blackcore-rouge
+            transition-all duration-500 shadow-lg hover:shadow-2xl hover:shadow-blackcore-rouge/50
+            disabled:bg-gray-400 disabled:cursor-not-allowed disabled:shadow-none"
                   >
                     Suivant
                   </button>

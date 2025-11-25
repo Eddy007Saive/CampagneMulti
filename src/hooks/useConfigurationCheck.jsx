@@ -59,18 +59,33 @@ export const useConfigurationCheck = ({ children }) => {
     checkConfiguration();
   }, [navigate, location.pathname]);
 
-  // Afficher un loader pendant la vérification
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="flex flex-col items-center gap-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-          <p className="text-gray-600">Vérification de la configuration...</p>
+if (isLoading) {
+  return (
+    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800">
+      <div className="flex flex-col items-center gap-6 p-8 rounded-2xl bg-slate-900/50 backdrop-blur-sm shadow-2xl">
+        
+        {/* Conteneur Logo + Loader */}
+        <div className="relative w-24 h-24 mb-4">
+          
+          {/* Loader multi-rings autour du logo */}
+          <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-cyan-400 animate-spin"></div>
+          <div className="absolute inset-2 rounded-full border-4 border-transparent border-t-blue-500 animate-spin" style={{animationDuration: '1.5s'}}></div>
+          <div className="absolute inset-4 rounded-full border-4 border-transparent border-t-purple-500 animate-spin" style={{animationDuration: '2s'}}></div>
+          
+          {/* Logo SRV centré */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <img 
+            src="/img/photo_5954299465697445759_x.jpg" 
+            alt="SRV" 
+            className="w-14 h-14 rounded-full object-cover border-2 border-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.5)]" 
+          />
+          </div>
         </div>
-      </div>
-    );
-  }
 
+      </div>
+    </div>
+  );
+}
   // Si pas de config, on attend la redirection
   if (!hasConfiguration) {
     return null;

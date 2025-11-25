@@ -200,7 +200,7 @@ export function LinkedInConfigInterface() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-bleu-fonce/90 to-noir-absolu/80">
+      <div className="min-h-screen ">
         <Loading/>
       </div>
     );
