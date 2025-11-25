@@ -431,7 +431,7 @@ export function CampaignDetailDashboard() {
     clearEvents();
 
     try {
-      await connectToWorkflow('/webhook/trier/profils', {
+      await connectToWorkflow('/webhook/profils/trier/profils', {
         id: campaignId
       });
 
@@ -455,7 +455,7 @@ export function CampaignDetailDashboard() {
     clearEvents();
 
     try {
-      await connectToWorkflow('/webhook/retrier/profils', {
+      await connectToWorkflow('/webhook/profils/retrier/profils', {
         id: campaignId
       });
       toastify.success(`Retri lancé pour ${totalProcessed} profils`);
@@ -589,7 +589,7 @@ export function CampaignDetailDashboard() {
     clearEvents();
 
     try {
-      const resp = await connectToWorkflow('/webhook/generer/messages', {
+      const resp = await connectToWorkflow('/webhook/messages/generer/messages', {
         id: campaignId,
         mode: 'generate'
       }).then5(async () => {
@@ -613,7 +613,7 @@ export function CampaignDetailDashboard() {
     clearEvents();
 
     try {
-      await connectToWorkflow('/webhook/regenerer/messages', {
+      await connectToWorkflow('/webhook/messages/regenerer/messages', {
         id: campaignId
       });
 
@@ -637,7 +637,7 @@ export function CampaignDetailDashboard() {
     clearEvents();
 
     try {
-      await connectToWorkflow('/webhook/enrichir/contacte', {
+      await connectToWorkflow('/webhook/contacts/enrichir/contacte', {
         id: campaignId
       });
 
@@ -659,7 +659,7 @@ export function CampaignDetailDashboard() {
     clearEvents();
 
     try {
-      await connectToWorkflow('/webhook/supprimer/contact/reject', {
+      await connectToWorkflow('/webhook/contacts/supprimer/contact/reject', {
         id: campaignId
       });
 
