@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, Save, Eye, EyeOff, AlertCircle, CheckCircle, Activity, Mail, Shield, Zap, Globe, Monitor, User } from 'lucide-react';
+import { Settings, Save, Eye, EyeOff, AlertCircle, CheckCircle, Activity, Mail, Shield, Zap, Globe, Monitor, User, Key, Loader } from 'lucide-react';
 import { 
   upsertConfiguration, 
   getSystemStatus,
   getConfiguration,
 } from '@/services/Configuration';
+import {testConnection} from '@/services/Emelia';
 import Loading from '@/components/Loading';
 
 export function LinkedInConfigInterface() {
@@ -13,7 +14,9 @@ export function LinkedInConfigInterface() {
     email: '',
     userAgent: '',
     status: 'Actif',
-    userId: null
+    userId: null,
+    emeliaApiKey: '',
+    ghlApiKey: ''
   });
   
   const [quota, setQuota] = useState({
@@ -23,11 +26,15 @@ export function LinkedInConfigInterface() {
   });
   
   const [showCookies, setShowCookies] = useState(false);
+  const [showEmeliaKey, setShowEmeliaKey] = useState(false);
+  const [showGhlKey, setShowGhlKey] = useState(false);
   const [validationStatus, setValidationStatus] = useState({});
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [systemStatus, setSystemStatus] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
+  const [isTestingEmelia, setIsTestingEmelia] = useState(false);
+  const [isTestingGhl, setIsTestingGhl] = useState(false);
 
   // Récupérer l'utilisateur depuis le localStorage
   useEffect(() => {
@@ -81,7 +88,9 @@ export function LinkedInConfigInterface() {
             email: currentUser.email || '',
             userAgent: status.configuration.userAgent || '',
             status: status.configuration.status || 'Actif',
-            userId: currentUser?.id
+            userId: currentUser?.id,
+            emeliaApiKey: status.configuration.emeliaApiKey || '',
+            ghlApiKey: status.configuration.ghlApiKey || ''
           });
         }
         
@@ -142,7 +151,6 @@ export function LinkedInConfigInterface() {
         }
       }));
     } else if (field === 'userAgent') {
-      // Validation basique du User-Agent
       const isValid = value && value.length > 50 && value.includes('Mozilla');
       setValidationStatus(prev => ({
         ...prev,
@@ -151,6 +159,121 @@ export function LinkedInConfigInterface() {
           message: isValid ? 'User-Agent valide' : 'User-Agent invalide ou manquant'
         }
       }));
+    } else if (field === 'emeliaApiKey') {
+      const isValid = value && value.length > 20;
+      setValidationStatus(prev => ({
+        ...prev,
+        emeliaApiKey: {
+          valid: isValid,
+          message: isValid ? 'Clé API valide' : 'Clé API invalide ou manquante'
+        }
+      }));
+    } else if (field === 'ghlApiKey') {
+      const isValid = value && value.length > 20;
+      setValidationStatus(prev => ({
+        ...prev,
+        ghlApiKey: {
+          valid: isValid,
+          message: isValid ? 'Clé API valide' : 'Clé API invalide ou manquante'
+        }
+      }));
+    }
+  };
+
+  const handleTestEmeliaConnection = async () => {
+    if (!config.emeliaApiKey) {
+      showNotification('Veuillez entrer une clé API Emelia', 'error');
+      return;
+    }
+
+    setIsTestingEmelia(true);
+    try {
+      const result = await testConnection(config.emeliaApiKey);      
+      
+      if (result.success) {
+        showNotification('✅ Connexion Emelia réussie !', 'success');
+        setValidationStatus(prev => ({
+          ...prev,
+          emeliaApiKey: {
+            valid: true,
+            message: 'Connexion réussie'
+          }
+        }));
+      } else {
+        showNotification('❌ Échec de connexion Emelia: ' + (result.error || 'Erreur inconnue'), 'error');
+        setValidationStatus(prev => ({
+          ...prev,
+          emeliaApiKey: {
+            valid: false,
+            message: 'Échec de connexion'
+          }
+        }));
+      }
+    } catch (error) {
+      console.error('Erreur test Emelia:', error);
+      showNotification('❌ Erreur lors du test de connexion Emelia', 'error');
+      setValidationStatus(prev => ({
+        ...prev,
+        emeliaApiKey: {
+          valid: false,
+          message: 'Erreur de connexion'
+        }
+      }));
+    } finally {
+      setIsTestingEmelia(false);
+    }
+  };
+
+  const handleTestGhlConnection = async () => {
+    if (!config.ghlApiKey) {
+      showNotification('Veuillez entrer une clé API GHL', 'error');
+      return;
+    }
+
+    setIsTestingGhl(true);
+    try {
+      // Simulation du test de connexion GHL
+      // Remplacez ceci par votre vrai service GHL
+      const response = await fetch('https://services.leadconnectorhq.com/contacts', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${config.ghlApiKey}`,
+          'Content-Type': 'application/json',
+          'Version':'2021-07-28'
+        }
+      });
+
+      if (response.ok) {
+        showNotification('✅ Connexion GHL réussie !', 'success');
+        setValidationStatus(prev => ({
+          ...prev,
+          ghlApiKey: {
+            valid: true,
+            message: 'Connexion réussie'
+          }
+        }));
+      } else {
+        showNotification('❌ Échec de connexion GHL', 'error');
+        setValidationStatus(prev => ({
+          ...prev,
+          ghlApiKey: {
+            valid: false,
+            message: 'Échec de connexion'
+          }
+        }));
+      }
+    } catch (error) {
+      console.error('Erreur test GHL:', error);
+      showNotification('❌ Erreur lors du test de connexion GHL', 'error');
+      setValidationStatus(prev => ({
+        ...prev,
+        ghlApiKey: {
+          valid: false,
+          message: 'Erreur de connexion'
+        }
+      }));
+    } finally {
+      setIsTestingGhl(false);
     }
   };
 
@@ -168,15 +291,15 @@ export function LinkedInConfigInterface() {
         email: config.email,
         userAgent: config.userAgent,
         status: config.status,
-        userId: config.userId
+        userId: config.userId,
+        emeliaApiKey: config.emeliaApiKey,
+        ghlApiKey: config.ghlApiKey
       };
       
       const result = await upsertConfiguration(configData);
       
       if (result.success) {
-        // Notification de succès moderne
         showNotification('Configuration sauvegardée avec succès !', 'success');
-        // Recharger le statut système
         await loadSystemData();
       }
     } catch (error) {
@@ -188,7 +311,6 @@ export function LinkedInConfigInterface() {
   };
 
   const showNotification = (message, type) => {
-    // Simple notification - dans un vrai projet, utiliser une librairie comme react-hot-toast
     const notification = document.createElement('div');
     notification.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${
       type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
@@ -455,6 +577,135 @@ export function LinkedInConfigInterface() {
             </div>
           </div>
 
+          {/* Emelia API Configuration */}
+          <div className="bg-white border rounded-lg shadow-sm overflow-hidden">
+            <div className="bg-gray-50 border-b px-6 py-4">
+              <div className="flex items-center gap-3">
+                <Key className="w-5 h-5 text-gray-600" />
+                <h3 className="font-semibold text-gray-900">API Emelia</h3>
+              </div>
+            </div>
+            
+            <div className="p-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Clé API Emelia
+                </label>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <input
+                      type={showEmeliaKey ? "text" : "password"}
+                      value={config.emeliaApiKey}
+                      onChange={(e) => handleInputChange('emeliaApiKey', e.target.value)}
+                      placeholder="Entrez votre clé API Emelia..."
+                      className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-10 text-gray-900"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowEmeliaKey(!showEmeliaKey)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      {showEmeliaKey ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
+                  </div>
+                  <button
+                    onClick={handleTestEmeliaConnection}
+                    disabled={isTestingEmelia || !config.emeliaApiKey}
+                    className="px-4 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-md hover:from-green-600 hover:to-emerald-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 whitespace-nowrap"
+                  >
+                    {isTestingEmelia ? (
+                      <>
+                        <Loader className="w-4 h-4 animate-spin" />
+                        Test...
+                      </>
+                    ) : (
+                      'Tester connexion'
+                    )}
+                  </button>
+                </div>
+                {validationStatus.emeliaApiKey && (
+                  <div className={`mt-2 flex items-center gap-2 text-sm ${
+                    validationStatus.emeliaApiKey.valid ? 'text-green-600' : 'text-red-600'
+                  }`}>
+                    {validationStatus.emeliaApiKey.valid ? (
+                      <CheckCircle className="w-4 h-4" />
+                    ) : (
+                      <AlertCircle className="w-4 h-4" />
+                    )}
+                    {validationStatus.emeliaApiKey.message}
+                  </div>
+                )}
+                <p className="mt-2 text-sm text-gray-500">
+                  Permet l'intégration avec Emelia pour l'envoi d'emails
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* GHL API Configuration */}
+          <div className="bg-white border rounded-lg shadow-sm overflow-hidden">
+            <div className="bg-gray-50 border-b px-6 py-4">
+              <div className="flex items-center gap-3">
+                <Key className="w-5 h-5 text-gray-600" />
+                <h3 className="font-semibold text-gray-900">API GoHighLevel</h3>
+              </div>
+            </div>
+            
+            <div className="p-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Clé API GHL
+                </label>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <input
+                      type={showGhlKey ? "text" : "password"}
+                      value={config.ghlApiKey}
+                      onChange={(e) => handleInputChange('ghlApiKey', e.target.value)}
+                      placeholder="Entrez votre clé API GHL..."
+                      className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-10 text-gray-900"/>
+                    <button
+                      type="button"
+                      onClick={() => setShowGhlKey(!showGhlKey)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      {showGhlKey ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
+                  </div>
+                  <button
+                    onClick={handleTestGhlConnection}
+                    disabled={isTestingGhl || !config.ghlApiKey}
+                    className="px-4 py-3 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-md hover:from-purple-600 hover:to-indigo-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 whitespace-nowrap"
+                  >
+                    {isTestingGhl ? (
+                      <>
+                        <Loader className="w-4 h-4 animate-spin" />
+                        Test...
+                      </>
+                    ) : (
+                      'Tester connexion'
+                    )}
+                  </button>
+                </div>
+                {validationStatus.ghlApiKey && (
+                  <div className={`mt-2 flex items-center gap-2 text-sm ${
+                    validationStatus.ghlApiKey.valid ? 'text-green-600' : 'text-red-600'
+                  }`}>
+                    {validationStatus.ghlApiKey.valid ? (
+                      <CheckCircle className="w-4 h-4" />
+                    ) : (
+                      <AlertCircle className="w-4 h-4" />
+                    )}
+                    {validationStatus.ghlApiKey.message}
+                  </div>
+                )}
+                <p className="mt-2 text-sm text-gray-500">
+                  Permet l'intégration avec GoHighLevel pour la gestion CRM
+                </p>
+              </div>
+            </div>
+          </div>
+
           {/* Status Configuration */}
           <div className="bg-white border rounded-lg shadow-sm overflow-hidden">
             <div className="bg-gray-50 border-b px-6 py-4">
@@ -513,46 +764,44 @@ export function LinkedInConfigInterface() {
         </div>
 
         {/* Save Button */}
-<div className="flex justify-end">
-    <button
-        onClick={handleSaveConfig}
-        disabled={
-            isSaving ||
-            !validationStatus.liAt?.valid ||
-            !validationStatus.email?.valid ||
-            !config.userId
-        }
-        className={`
-            relative px-8 py-3 font-poppins font-bold uppercase tracking-wider
-            text-white overflow-hidden group rounded-lg border-0
-            bg-gradient-to-r from-blackcore-rouge via-blue-500 to-cyan-500
-            hover:from-cyan-500 hover:via-blue-500 hover:to-blackcore-rouge
-            transition-all duration-500 shadow-lg hover:shadow-2xl hover:shadow-blackcore-rouge/50
-            disabled:bg-gray-400 disabled:cursor-not-allowed disabled:shadow-none
-        `}
-    >
-        <span className="relative z-10 flex items-center gap-2">
-            {isSaving ? (
+        <div className="flex justify-end">
+          <button
+            onClick={handleSaveConfig}
+            disabled={
+              isSaving ||
+              !validationStatus.liAt?.valid ||
+              !validationStatus.email?.valid ||
+              !config.userId
+            }
+            className={`
+              relative px-8 py-3 font-poppins font-bold uppercase tracking-wider
+              text-white overflow-hidden group rounded-lg border-0
+              bg-gradient-to-r from-blackcore-rouge via-blue-500 to-cyan-500
+              hover:from-cyan-500 hover:via-blue-500 hover:to-blackcore-rouge
+              transition-all duration-500 shadow-lg hover:shadow-2xl hover:shadow-blackcore-rouge/50
+              disabled:bg-gray-400 disabled:cursor-not-allowed disabled:shadow-none
+            `}
+          >
+            <span className="relative z-10 flex items-center gap-2">
+              {isSaving ? (
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            ) : (
+              ) : (
                 <Save className="w-5 h-5" />
-            )}
+              )}
 
-            <span>
+              <span>
                 {isSaving ? "Sauvegarde en cours..." : "Sauvegarder la Configuration"}
+              </span>
             </span>
-        </span>
 
-        {/* Effet balayage futuriste (identique au bouton Rechercher) */}
-        <div className="
-            absolute inset-0 bg-gradient-to-r 
-            from-transparent via-white/20 to-transparent
-            -translate-x-full group-hover:translate-x-full
-            transition-transform duration-700
-        "></div>
-    </button>
-</div>
-
+            <div className="
+              absolute inset-0 bg-gradient-to-r 
+              from-transparent via-white/20 to-transparent
+              -translate-x-full group-hover:translate-x-full
+              transition-transform duration-700
+            "></div>
+          </button>
+        </div>
       </div>
     </div>
   );

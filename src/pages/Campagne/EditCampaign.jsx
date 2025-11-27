@@ -27,7 +27,7 @@ import { updateCampagne, getCampagneById } from "@/services/Campagne";
 import { ToastContainer } from "react-toastify";
 import 'react-toastify/dist/ReactToastify.css';
 import toastify from "@/utils/toastify";
-import { emeliaService } from "@/services/Emelia";
+import { testConnection } from "@/services/Emelia";
 import Loading from "@/components/Loading";
 
 const CampagneSchema = {

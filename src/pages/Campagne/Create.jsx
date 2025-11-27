@@ -28,7 +28,7 @@ import { ToastContainer } from "react-toastify";
 import 'react-toastify/dist/ReactToastify.css';
 import toastify from "@/utils/toastify";
 import { useNavigate } from 'react-router-dom';
-import { emeliaService } from "@/services/Emelia";
+import { testConnection  } from "@/services/Emelia";
 import { Step0GeneralInfo } from "@/components/steps/Step0GeneralInfo";
 import { Step1CriteresPro } from "@/components/steps/Step1CriteresPro";
 import { Step2Planning } from "@/components/steps/Step2Planning";
