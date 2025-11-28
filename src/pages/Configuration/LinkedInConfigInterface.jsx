@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Settings, Save, Eye, EyeOff, AlertCircle, CheckCircle, Activity, Mail, Shield, Zap, Globe, Monitor, User, Key, Loader } from 'lucide-react';
-import { 
-  upsertConfiguration, 
+import {
+  upsertConfiguration,
   getSystemStatus,
   getConfiguration,
 } from '@/services/Configuration';
-import {testConnection} from '@/services/Emelia';
+import { testConnection } from '@/services/Emelia';
+import { testConnection as testConnectionGHL } from '@/services/GodHighLevel';
 import Loading from '@/components/Loading';
 
 export function LinkedInConfigInterface() {
@@ -18,13 +19,13 @@ export function LinkedInConfigInterface() {
     emeliaApiKey: '',
     ghlApiKey: ''
   });
-  
+
   const [quota, setQuota] = useState({
     quotaRestant: 0,
     derniereMiseAJour: '',
     idCampagneActive: ''
   });
-  
+
   const [showCookies, setShowCookies] = useState(false);
   const [showEmeliaKey, setShowEmeliaKey] = useState(false);
   const [showGhlKey, setShowGhlKey] = useState(false);
@@ -48,7 +49,7 @@ export function LinkedInConfigInterface() {
             ...prev,
             userId: user.id
           }));
-          
+
         } else {
           console.warn('Aucun utilisateur trouvé dans le localStorage');
         }
@@ -77,7 +78,7 @@ export function LinkedInConfigInterface() {
     setIsLoading(true);
     try {
       const status = await getSystemStatus(currentUser);
-      
+
       if (status) {
         setSystemStatus(status);
 
@@ -90,15 +91,16 @@ export function LinkedInConfigInterface() {
             status: status.configuration.status || 'Actif',
             userId: currentUser?.id,
             emeliaApiKey: status.configuration.emeliaApiKey || '',
-            ghlApiKey: status.configuration.ghlApiKey || ''
+            ghlApiKey: status.configuration.ghlApiKey || '',
+            ghlLocationId: status.configuration.ghlLocationId || '' // NOUVEAU
           });
         }
-        
+
         // Charger le quota
         if (status.quota) {
           setQuota(status.quota);
         }
-        
+
         // Mettre à jour le statut de validation
         if (status.validation) {
           setValidationStatus({
@@ -129,7 +131,7 @@ export function LinkedInConfigInterface() {
       ...prev,
       [field]: value
     }));
-    
+
     // Validation en temps réel
     if (field === 'email') {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -188,8 +190,8 @@ export function LinkedInConfigInterface() {
 
     setIsTestingEmelia(true);
     try {
-      const result = await testConnection(config.emeliaApiKey);      
-      
+      const result = await testConnection(config.emeliaApiKey);
+
       if (result.success) {
         showNotification('✅ Connexion Emelia réussie !', 'success');
         setValidationStatus(prev => ({
@@ -225,31 +227,27 @@ export function LinkedInConfigInterface() {
   };
 
   const handleTestGhlConnection = async () => {
-    if (!config.ghlApiKey) {
-      showNotification('Veuillez entrer une clé API GHL', 'error');
+    if (!config.ghlApiKey || !config.ghlLocationId) {
+      showNotification('Veuillez entrer une clé API et un Location ID GHL', 'error');
       return;
     }
 
     setIsTestingGhl(true);
     try {
-      // Simulation du test de connexion GHL
-      // Remplacez ceci par votre vrai service GHL
-      const response = await fetch('https://services.leadconnectorhq.com/contacts', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${config.ghlApiKey}`,
-          'Content-Type': 'application/json',
-          'Version':'2021-07-28'
-        }
-      });
-
-      if (response.ok) {
+      const response= await testConnectionGHL(config);
+      console.log(response);
+      
+      if (response.success) {
         showNotification('✅ Connexion GHL réussie !', 'success');
         setValidationStatus(prev => ({
           ...prev,
           ghlApiKey: {
             valid: true,
             message: 'Connexion réussie'
+          },
+          ghlLocationId: {
+            valid: true,
+            message: 'Location ID validé'
           }
         }));
       } else {
@@ -284,7 +282,7 @@ export function LinkedInConfigInterface() {
     }
 
     setIsSaving(true);
-    
+
     try {
       const configData = {
         valeur: config.liAt,
@@ -293,11 +291,12 @@ export function LinkedInConfigInterface() {
         status: config.status,
         userId: config.userId,
         emeliaApiKey: config.emeliaApiKey,
-        ghlApiKey: config.ghlApiKey
+        ghlApiKey: config.ghlApiKey,
+        ghlLocationId: config.ghlLocationId // NOUVEAU
       };
-      
+
       const result = await upsertConfiguration(configData);
-      
+
       if (result.success) {
         showNotification('Configuration sauvegardée avec succès !', 'success');
         await loadSystemData();
@@ -312,9 +311,8 @@ export function LinkedInConfigInterface() {
 
   const showNotification = (message, type) => {
     const notification = document.createElement('div');
-    notification.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${
-      type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
-    }`;
+    notification.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+      }`;
     notification.textContent = message;
     document.body.appendChild(notification);
     setTimeout(() => notification.remove(), 3000);
@@ -323,7 +321,7 @@ export function LinkedInConfigInterface() {
   if (isLoading) {
     return (
       <div className="min-h-screen ">
-        <Loading/>
+        <Loading />
       </div>
     );
   }
@@ -345,24 +343,24 @@ export function LinkedInConfigInterface() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-bleu-fonce/90 to-noir-absolu/80 text-white">
-      <div className="max-w-4xl mx-auto p-6">
+    <div className="min-h-screen bg-gradient-to-br from-[#0B1030] via-[#000000] to-[#0B1030] text-white">
+      <div className="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8">
         {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="p-3 bg-blue-600 rounded-lg">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-6">
+            <div className="p-3 bg-gradient-to-br from-[#00CFFF] to-[#A63DFF] rounded-xl shadow-[0_0_20px_rgba(0,207,255,0.5)]">
               <Settings className="w-6 h-6 text-white" />
             </div>
             <div className="flex-1">
-              <h1 className="text-2xl font-bold text-blue-900">
+              <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-[#00CFFF] to-[#A63DFF] bg-clip-text text-transparent">
                 Configuration LinkedIn
               </h1>
-              <p className="text-gray-600">Configurez votre connexion LinkedIn pour automatiser vos campagnes</p>
+              <p className="text-[#00CFFF]/70 text-sm sm:text-base">Configurez votre connexion LinkedIn pour automatiser vos campagnes</p>
             </div>
             {currentUser && (
-              <div className="flex items-center gap-2 bg-blue-50 px-4 py-2 rounded-lg border border-blue-200">
-                <User className="w-4 h-4 text-blue-600" />
-                <span className="text-sm font-medium text-blue-900">
+              <div className="flex items-center gap-2 bg-[#0B1030]/80 border border-[#00CFFF]/30 px-4 py-2 rounded-lg backdrop-blur-sm">
+                <User className="w-4 h-4 text-[#00CFFF]" />
+                <span className="text-sm font-medium text-white">
                   {currentUser.nom || currentUser.name || currentUser.email}
                 </span>
               </div>
@@ -373,22 +371,22 @@ export function LinkedInConfigInterface() {
         {/* System Status Card */}
         {systemStatus && (
           <div className="mb-6">
-            <div className={`rounded-lg border p-4 ${
+            <div className={`rounded-xl border p-4 backdrop-blur-sm ${
               systemStatus.systemReady 
-                ? 'bg-green-50 border-green-200' 
-                : 'bg-red-50 border-red-200'
+                ? 'bg-green-500/10 border-green-400/30 shadow-[0_0_20px_rgba(34,197,94,0.2)]' 
+                : 'bg-red-500/10 border-red-400/30 shadow-[0_0_20px_rgba(239,68,68,0.2)]'
             }`}>
               <div className="flex items-center gap-3">
                 {systemStatus.systemReady ? (
-                  <CheckCircle className="w-5 h-5 text-green-600" />
+                  <CheckCircle className="w-5 h-5 text-green-400" />
                 ) : (
-                  <AlertCircle className="w-5 h-5 text-red-600" />
+                  <AlertCircle className="w-5 h-5 text-red-400" />
                 )}
                 <div>
-                  <h3 className="font-semibold text-gray-900">
+                  <h3 className="font-semibold text-white">
                     {systemStatus.systemReady ? 'Système Opérationnel' : 'Configuration Requise'}
                   </h3>
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-[#00CFFF]/70">
                     {systemStatus.systemReady 
                       ? 'Votre configuration est complète et fonctionnelle' 
                       : 'Veuillez compléter la configuration'
@@ -403,29 +401,31 @@ export function LinkedInConfigInterface() {
         {/* Quota Card */}
         {quota && (
           <div className="mb-6">
-            <div className="bg-white border rounded-lg p-4 shadow-sm">
-              <div className="flex items-center justify-between">
+            <div className="bg-gradient-to-br from-[#0B1030]/80 to-[#000000]/60 border border-[#00CFFF]/30 rounded-xl p-4 sm:p-6 shadow-[0_0_30px_rgba(0,207,255,0.2)] backdrop-blur-sm">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-blue-50 rounded-lg">
-                    <Activity className="w-5 h-5 text-blue-600" />
+                  <div className="p-2 bg-[#00CFFF]/20 rounded-lg border border-[#00CFFF]/40">
+                    <Activity className="w-5 h-5 text-[#00CFFF]" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-gray-900">Quota Journalier</h3>
-                    <p className="text-sm text-gray-600">Gestion de vos connexions quotidiennes</p>
+                    <h3 className="font-semibold text-white">Quota Journalier</h3>
+                    <p className="text-sm text-[#00CFFF]/70">Gestion de vos connexions quotidiennes</p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="text-2xl font-bold text-blue-600">{quota.quotaRestant}</div>
-                  <p className="text-sm text-gray-500">connexions restantes</p>
+                  <div className="text-3xl font-bold bg-gradient-to-r from-[#00CFFF] to-[#A63DFF] bg-clip-text text-transparent">
+                    {quota.quotaRestant}
+                  </div>
+                  <p className="text-sm text-[#00CFFF]/70">connexions restantes</p>
                 </div>
               </div>
               
               {quota.derniereMiseAJour && (
-                <div className="mt-4 pt-4 border-t border-gray-100">
-                  <p className="text-sm text-gray-500">
+                <div className="mt-4 pt-4 border-t border-[#00CFFF]/20">
+                  <p className="text-sm text-[#00CFFF]/60">
                     Dernière mise à jour: {quota.derniereMiseAJour}
                     {quota.idCampagneActive && (
-                      <span className="ml-4 px-2 py-1 bg-blue-50 text-blue-700 rounded-md text-xs">
+                      <span className="ml-4 px-2 py-1 bg-[#A63DFF]/20 text-[#A63DFF] border border-[#A63DFF]/30 rounded-md text-xs">
                         Campagne: {quota.idCampagneActive}
                       </span>
                     )}
@@ -439,17 +439,19 @@ export function LinkedInConfigInterface() {
         {/* Configuration Cards */}
         <div className="space-y-6 mb-6">
           {/* Cookie Configuration */}
-          <div className="bg-white border rounded-lg shadow-sm overflow-hidden">
-            <div className="bg-gray-50 border-b px-6 py-4">
+          <div className="bg-gradient-to-br from-[#0B1030]/80 to-[#000000]/60 border border-[#00CFFF]/30 rounded-xl shadow-[0_0_30px_rgba(0,207,255,0.2)] overflow-hidden backdrop-blur-sm">
+            <div className="bg-gradient-to-r from-[#A63DFF]/20 to-[#00CFFF]/20 border-b border-[#00CFFF]/30 px-6 py-4">
               <div className="flex items-center gap-3">
-                <Shield className="w-5 h-5 text-gray-600" />
-                <h3 className="font-semibold text-gray-900">Configuration des Cookies</h3>
+                <div className="p-2 bg-[#00CFFF]/20 rounded-lg border border-[#00CFFF]/40">
+                  <Shield className="w-5 h-5 text-[#00CFFF]" />
+                </div>
+                <h3 className="font-semibold text-[#00CFFF]">Configuration des Cookies</h3>
               </div>
             </div>
             
             <div className="p-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-[#00CFFF]/90 mb-2">
                   Cookie li_at (obligatoire)
                 </label>
                 <div className="relative">
@@ -458,19 +460,22 @@ export function LinkedInConfigInterface() {
                     value={config.liAt}
                     onChange={(e) => handleInputChange('liAt', e.target.value)}
                     placeholder="Entrez votre cookie li_at..."
-                    className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-10 text-gray-900"
+                    className="w-full p-3 bg-[#0B1030]/50 border border-[#00CFFF]/40 rounded-lg 
+                      focus:ring-2 focus:ring-[#A63DFF] focus:border-[#A63DFF] 
+                      text-white placeholder-[#00CFFF]/50 pr-10
+                      transition-all duration-300 hover:border-[#00CFFF]/60"
                   />
                   <button
                     type="button"
                     onClick={() => setShowCookies(!showCookies)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#00CFFF]/60 hover:text-[#00CFFF] transition-colors"
                   >
                     {showCookies ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
                 </div>
                 {validationStatus.liAt && (
                   <div className={`mt-2 flex items-center gap-2 text-sm ${
-                    validationStatus.liAt.valid ? 'text-green-600' : 'text-red-600'
+                    validationStatus.liAt.valid ? 'text-green-400' : 'text-red-400'
                   }`}>
                     {validationStatus.liAt.valid ? (
                       <CheckCircle className="w-4 h-4" />
@@ -485,16 +490,18 @@ export function LinkedInConfigInterface() {
           </div>
 
           {/* User-Agent Configuration */}
-          <div className="bg-white border rounded-lg shadow-sm overflow-hidden">
-            <div className="bg-gray-50 border-b px-6 py-4">
-              <div className="flex items-center justify-between">
+          <div className="bg-gradient-to-br from-[#0B1030]/80 to-[#000000]/60 border border-[#00CFFF]/30 rounded-xl shadow-[0_0_30px_rgba(0,207,255,0.2)] overflow-hidden backdrop-blur-sm">
+            <div className="bg-gradient-to-r from-[#A63DFF]/20 to-[#00CFFF]/20 border-b border-[#00CFFF]/30 px-6 py-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <Monitor className="w-5 h-5 text-gray-600" />
-                  <h3 className="font-semibold text-gray-900">Configuration User-Agent</h3>
+                  <div className="p-2 bg-[#00CFFF]/20 rounded-lg border border-[#00CFFF]/40">
+                    <Monitor className="w-5 h-5 text-[#00CFFF]" />
+                  </div>
+                  <h3 className="font-semibold text-[#00CFFF]">Configuration User-Agent</h3>
                 </div>
                 <button
                   onClick={detectUserAgent}
-                  className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                  className="px-3 py-1.5 text-sm bg-gradient-to-r from-[#00CFFF] to-[#A63DFF] text-white rounded-lg hover:shadow-[0_0_20px_rgba(0,207,255,0.5)] transition-all duration-300"
                 >
                   Détecter automatiquement
                 </button>
@@ -503,7 +510,7 @@ export function LinkedInConfigInterface() {
             
             <div className="p-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-[#00CFFF]/90 mb-2">
                   User-Agent (recommandé)
                 </label>
                 <div className="relative">
@@ -512,12 +519,15 @@ export function LinkedInConfigInterface() {
                     onChange={(e) => handleInputChange('userAgent', e.target.value)}
                     placeholder="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36..."
                     rows={3}
-                    className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none text-gray-900"
+                    className="w-full p-3 bg-[#0B1030]/50 border border-[#00CFFF]/40 rounded-lg 
+                      focus:ring-2 focus:ring-[#A63DFF] focus:border-[#A63DFF] 
+                      text-white placeholder-[#00CFFF]/50 resize-none
+                      transition-all duration-300 hover:border-[#00CFFF]/60"
                   />
                 </div>
                 {validationStatus.userAgent && (
                   <div className={`mt-2 flex items-center gap-2 text-sm ${
-                    validationStatus.userAgent.valid ? 'text-green-600' : 'text-red-600'
+                    validationStatus.userAgent.valid ? 'text-green-400' : 'text-red-400'
                   }`}>
                     {validationStatus.userAgent.valid ? (
                       <CheckCircle className="w-4 h-4" />
@@ -527,7 +537,7 @@ export function LinkedInConfigInterface() {
                     {validationStatus.userAgent.message}
                   </div>
                 )}
-                <p className="mt-2 text-sm text-gray-500">
+                <p className="mt-2 text-sm text-[#00CFFF]/60">
                   Identifie votre navigateur pour éviter la détection automatisée
                 </p>
               </div>
@@ -535,17 +545,19 @@ export function LinkedInConfigInterface() {
           </div>
 
           {/* Email Configuration */}
-          <div className="bg-white border rounded-lg shadow-sm overflow-hidden">
-            <div className="bg-gray-50 border-b px-6 py-4">
+          <div className="bg-gradient-to-br from-[#0B1030]/80 to-[#000000]/60 border border-[#00CFFF]/30 rounded-xl shadow-[0_0_30px_rgba(0,207,255,0.2)] overflow-hidden backdrop-blur-sm">
+            <div className="bg-gradient-to-r from-[#A63DFF]/20 to-[#00CFFF]/20 border-b border-[#00CFFF]/30 px-6 py-4">
               <div className="flex items-center gap-3">
-                <Mail className="w-5 h-5 text-gray-600" />
-                <h3 className="font-semibold text-gray-900">Configuration Email</h3>
+                <div className="p-2 bg-[#00CFFF]/20 rounded-lg border border-[#00CFFF]/40">
+                  <Mail className="w-5 h-5 text-[#00CFFF]" />
+                </div>
+                <h3 className="font-semibold text-[#00CFFF]">Configuration Email</h3>
               </div>
             </div>
             
             <div className="p-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-[#00CFFF]/90 mb-2">
                   Email de notification
                 </label>
                 <div className="relative">
@@ -554,13 +566,16 @@ export function LinkedInConfigInterface() {
                     value={config.email}
                     onChange={(e) => handleInputChange('email', e.target.value)}
                     placeholder="nom@exemple.com"
-                    className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pl-10 text-gray-900"
+                    className="w-full p-3 bg-[#0B1030]/50 border border-[#00CFFF]/40 rounded-lg 
+                      focus:ring-2 focus:ring-[#A63DFF] focus:border-[#A63DFF] 
+                      text-white placeholder-[#00CFFF]/50 pl-10
+                      transition-all duration-300 hover:border-[#00CFFF]/60"
                   />
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#00CFFF]/60" />
                 </div>
                 {validationStatus.email && (
                   <div className={`mt-2 flex items-center gap-2 text-sm ${
-                    validationStatus.email.valid ? 'text-green-600' : 'text-red-600'
+                    validationStatus.email.valid ? 'text-green-400' : 'text-red-400'
                   }`}>
                     {validationStatus.email.valid ? (
                       <CheckCircle className="w-4 h-4" />
@@ -570,7 +585,7 @@ export function LinkedInConfigInterface() {
                     {validationStatus.email.message}
                   </div>
                 )}
-                <p className="mt-2 text-sm text-gray-500">
+                <p className="mt-2 text-sm text-[#00CFFF]/60">
                   Recevez des notifications sur l'état de vos campagnes
                 </p>
               </div>
@@ -578,32 +593,37 @@ export function LinkedInConfigInterface() {
           </div>
 
           {/* Emelia API Configuration */}
-          <div className="bg-white border rounded-lg shadow-sm overflow-hidden">
-            <div className="bg-gray-50 border-b px-6 py-4">
+          <div className="bg-gradient-to-br from-[#0B1030]/80 to-[#000000]/60 border border-[#00CFFF]/30 rounded-xl shadow-[0_0_30px_rgba(0,207,255,0.2)] overflow-hidden backdrop-blur-sm">
+            <div className="bg-gradient-to-r from-[#A63DFF]/20 to-[#00CFFF]/20 border-b border-[#00CFFF]/30 px-6 py-4">
               <div className="flex items-center gap-3">
-                <Key className="w-5 h-5 text-gray-600" />
-                <h3 className="font-semibold text-gray-900">API Emelia</h3>
+                <div className="p-2 bg-[#A63DFF]/20 rounded-lg border border-[#A63DFF]/40">
+                  <Key className="w-5 h-5 text-[#A63DFF]" />
+                </div>
+                <h3 className="font-semibold text-[#00CFFF]">API Emelia</h3>
               </div>
             </div>
             
             <div className="p-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-[#00CFFF]/90 mb-2">
                   Clé API Emelia
                 </label>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-col sm:flex-row">
                   <div className="relative flex-1">
                     <input
                       type={showEmeliaKey ? "text" : "password"}
                       value={config.emeliaApiKey}
                       onChange={(e) => handleInputChange('emeliaApiKey', e.target.value)}
                       placeholder="Entrez votre clé API Emelia..."
-                      className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-10 text-gray-900"
+                      className="w-full p-3 bg-[#0B1030]/50 border border-[#00CFFF]/40 rounded-lg 
+                        focus:ring-2 focus:ring-[#A63DFF] focus:border-[#A63DFF] 
+                        text-white placeholder-[#00CFFF]/50 pr-10
+                        transition-all duration-300 hover:border-[#00CFFF]/60"
                     />
                     <button
                       type="button"
                       onClick={() => setShowEmeliaKey(!showEmeliaKey)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#00CFFF]/60 hover:text-[#00CFFF] transition-colors"
                     >
                       {showEmeliaKey ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
@@ -611,7 +631,12 @@ export function LinkedInConfigInterface() {
                   <button
                     onClick={handleTestEmeliaConnection}
                     disabled={isTestingEmelia || !config.emeliaApiKey}
-                    className="px-4 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-md hover:from-green-600 hover:to-emerald-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 whitespace-nowrap"
+                    className="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 
+                      text-white font-semibold rounded-lg
+                      hover:shadow-[0_0_20px_rgba(34,197,94,0.5)] transition-all duration-300 
+                      disabled:opacity-50 disabled:cursor-not-allowed 
+                      flex items-center justify-center gap-2 whitespace-nowrap
+                      sm:w-auto w-full"
                   >
                     {isTestingEmelia ? (
                       <>
@@ -625,7 +650,7 @@ export function LinkedInConfigInterface() {
                 </div>
                 {validationStatus.emeliaApiKey && (
                   <div className={`mt-2 flex items-center gap-2 text-sm ${
-                    validationStatus.emeliaApiKey.valid ? 'text-green-600' : 'text-red-600'
+                    validationStatus.emeliaApiKey.valid ? 'text-green-400' : 'text-red-400'
                   }`}>
                     {validationStatus.emeliaApiKey.valid ? (
                       <CheckCircle className="w-4 h-4" />
@@ -635,7 +660,7 @@ export function LinkedInConfigInterface() {
                     {validationStatus.emeliaApiKey.message}
                   </div>
                 )}
-                <p className="mt-2 text-sm text-gray-500">
+                <p className="mt-2 text-sm text-[#00CFFF]/60">
                   Permet l'intégration avec Emelia pour l'envoi d'emails
                 </p>
               </div>
@@ -643,39 +668,84 @@ export function LinkedInConfigInterface() {
           </div>
 
           {/* GHL API Configuration */}
-          <div className="bg-white border rounded-lg shadow-sm overflow-hidden">
-            <div className="bg-gray-50 border-b px-6 py-4">
+          <div className="bg-gradient-to-br from-[#0B1030]/80 to-[#000000]/60 border border-[#00CFFF]/30 rounded-xl shadow-[0_0_30px_rgba(0,207,255,0.2)] overflow-hidden backdrop-blur-sm">
+            <div className="bg-gradient-to-r from-[#A63DFF]/20 to-[#00CFFF]/20 border-b border-[#00CFFF]/30 px-6 py-4">
               <div className="flex items-center gap-3">
-                <Key className="w-5 h-5 text-gray-600" />
-                <h3 className="font-semibold text-gray-900">API GoHighLevel</h3>
+                <div className="p-2 bg-[#A63DFF]/20 rounded-lg border border-[#A63DFF]/40">
+                  <Key className="w-5 h-5 text-[#A63DFF]" />
+                </div>
+                <h3 className="font-semibold text-[#00CFFF]">API GoHighLevel</h3>
               </div>
             </div>
             
-            <div className="p-6">
+            <div className="p-6 space-y-6">
+              {/* Clé API GHL */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-[#00CFFF]/90 mb-2">
                   Clé API GHL
                 </label>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-col sm:flex-row">
                   <div className="relative flex-1">
                     <input
                       type={showGhlKey ? "text" : "password"}
                       value={config.ghlApiKey}
                       onChange={(e) => handleInputChange('ghlApiKey', e.target.value)}
                       placeholder="Entrez votre clé API GHL..."
-                      className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 pr-10 text-gray-900"/>
+                      className="w-full p-3 bg-[#0B1030]/50 border border-[#00CFFF]/40 rounded-lg 
+                        focus:ring-2 focus:ring-[#A63DFF] focus:border-[#A63DFF] 
+                        text-white placeholder-[#00CFFF]/50 pr-10
+                        transition-all duration-300 hover:border-[#00CFFF]/60"
+                    />
                     <button
                       type="button"
                       onClick={() => setShowGhlKey(!showGhlKey)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#00CFFF]/60 hover:text-[#00CFFF] transition-colors"
                     >
                       {showGhlKey ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
                   </div>
+                </div>
+                {validationStatus.ghlApiKey && (
+                  <div className={`mt-2 flex items-center gap-2 text-sm ${
+                    validationStatus.ghlApiKey.valid ? 'text-green-400' : 'text-red-400'
+                  }`}>
+                    {validationStatus.ghlApiKey.valid ? (
+                      <CheckCircle className="w-4 h-4" />
+                    ) : (
+                      <AlertCircle className="w-4 h-4" />
+                    )}
+                    {validationStatus.ghlApiKey.message}
+                  </div>
+                )}
+              </div>
+
+              {/* Location ID */}
+              <div>
+                <label className="block text-sm font-medium text-[#00CFFF]/90 mb-2">
+                  Location ID
+                </label>
+                <div className="flex gap-2 flex-col sm:flex-row">
+                  <div className="relative flex-1">
+                    <input
+                      type="text"
+                      value={config.ghlLocationId}
+                      onChange={(e) => handleInputChange('ghlLocationId', e.target.value)}
+                      placeholder="Entrez votre Location ID..."
+                      className="w-full p-3 bg-[#0B1030]/50 border border-[#00CFFF]/40 rounded-lg 
+                        focus:ring-2 focus:ring-[#A63DFF] focus:border-[#A63DFF] 
+                        text-white placeholder-[#00CFFF]/50
+                        transition-all duration-300 hover:border-[#00CFFF]/60"
+                    />
+                  </div>
                   <button
                     onClick={handleTestGhlConnection}
-                    disabled={isTestingGhl || !config.ghlApiKey}
-                    className="px-4 py-3 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-md hover:from-purple-600 hover:to-indigo-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 whitespace-nowrap"
+                    disabled={isTestingGhl || !config.ghlApiKey || !config.ghlLocationId}
+                    className="px-6 py-3 bg-gradient-to-r from-[#A63DFF] to-[#00CFFF] 
+                      text-white font-semibold rounded-lg
+                      hover:shadow-[0_0_25px_rgba(166,61,255,0.5)] transition-all duration-300 
+                      disabled:opacity-50 disabled:cursor-not-allowed 
+                      flex items-center justify-center gap-2 whitespace-nowrap
+                      sm:w-auto w-full"
                   >
                     {isTestingGhl ? (
                       <>
@@ -687,19 +757,19 @@ export function LinkedInConfigInterface() {
                     )}
                   </button>
                 </div>
-                {validationStatus.ghlApiKey && (
+                {validationStatus.ghlLocationId && (
                   <div className={`mt-2 flex items-center gap-2 text-sm ${
-                    validationStatus.ghlApiKey.valid ? 'text-green-600' : 'text-red-600'
+                    validationStatus.ghlLocationId.valid ? 'text-green-400' : 'text-red-400'
                   }`}>
-                    {validationStatus.ghlApiKey.valid ? (
+                    {validationStatus.ghlLocationId.valid ? (
                       <CheckCircle className="w-4 h-4" />
                     ) : (
                       <AlertCircle className="w-4 h-4" />
                     )}
-                    {validationStatus.ghlApiKey.message}
+                    {validationStatus.ghlLocationId.message}
                   </div>
                 )}
-                <p className="mt-2 text-sm text-gray-500">
+                <p className="mt-2 text-sm text-[#00CFFF]/60">
                   Permet l'intégration avec GoHighLevel pour la gestion CRM
                 </p>
               </div>
@@ -707,23 +777,29 @@ export function LinkedInConfigInterface() {
           </div>
 
           {/* Status Configuration */}
-          <div className="bg-white border rounded-lg shadow-sm overflow-hidden">
-            <div className="bg-gray-50 border-b px-6 py-4">
+          <div className="bg-gradient-to-br from-[#0B1030]/80 to-[#000000]/60 border border-[#00CFFF]/30 rounded-xl shadow-[0_0_30px_rgba(0,207,255,0.2)] overflow-hidden backdrop-blur-sm">
+            <div className="bg-gradient-to-r from-[#A63DFF]/20 to-[#00CFFF]/20 border-b border-[#00CFFF]/30 px-6 py-4">
               <div className="flex items-center gap-3">
-                <Zap className="w-5 h-5 text-gray-600" />
-                <h3 className="font-semibold text-gray-900">Statut du Système</h3>
+                <div className="p-2 bg-[#00CFFF]/20 rounded-lg border border-[#00CFFF]/40">
+                  <Zap className="w-5 h-5 text-[#00CFFF]" />
+                </div>
+                <h3 className="font-semibold text-[#00CFFF]">Statut du Système</h3>
               </div>
             </div>
             
             <div className="p-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-[#00CFFF]/90 mb-2">
                   État de la configuration
                 </label>
                 <select
                   value={config.status}
                   onChange={(e) => handleInputChange('status', e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                  className="w-full p-3 bg-[#0B1030]/50 border border-[#00CFFF]/40 rounded-lg 
+                    focus:ring-2 focus:ring-[#A63DFF] focus:border-[#A63DFF] 
+                    text-white
+                    transition-all duration-300 hover:border-[#00CFFF]/60
+                    [&>option]:bg-[#0B1030] [&>option]:text-white"
                 >
                   <option value="Actif">🟢 Actif</option>
                   <option value="Inactif">🔴 Inactif</option>
@@ -734,14 +810,14 @@ export function LinkedInConfigInterface() {
         </div>
 
         {/* Help Card */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
+        <div className="bg-gradient-to-br from-[#00CFFF]/10 to-[#A63DFF]/10 border border-[#00CFFF]/30 rounded-xl p-6 mb-6 backdrop-blur-sm">
           <div className="flex items-start gap-3">
-            <Globe className="w-5 h-5 text-blue-600 mt-0.5" />
-            <div>
-              <h4 className="font-semibold text-blue-900 mb-3">Guide de configuration</h4>
-              <div className="grid md:grid-cols-2 gap-6 text-sm text-blue-800">
+            <Globe className="w-5 h-5 text-[#00CFFF] mt-0.5 flex-shrink-0" />
+            <div className="flex-1">
+              <h4 className="font-semibold text-[#00CFFF] mb-3">Guide de configuration</h4>
+              <div className="grid md:grid-cols-2 gap-6 text-sm text-[#00CFFF]/80">
                 <div>
-                  <h5 className="font-semibold mb-2">📍 Obtenir le cookie LinkedIn :</h5>
+                  <h5 className="font-semibold mb-2 text-[#A63DFF]">📍 Obtenir le cookie LinkedIn :</h5>
                   <div className="space-y-1">
                     <div>1. Connectez-vous à LinkedIn</div>
                     <div>2. Ouvrez F12 → Application → Cookies</div>
@@ -750,7 +826,7 @@ export function LinkedInConfigInterface() {
                   </div>
                 </div>
                 <div>
-                  <h5 className="font-semibold mb-2">🌐 Obtenir le User-Agent :</h5>
+                  <h5 className="font-semibold mb-2 text-[#A63DFF]">🌐 Obtenir le User-Agent :</h5>
                   <div className="space-y-1">
                     <div>1. Ouvrez F12 → Console</div>
                     <div>2. Tapez: navigator.userAgent</div>
@@ -773,14 +849,13 @@ export function LinkedInConfigInterface() {
               !validationStatus.email?.valid ||
               !config.userId
             }
-            className={`
-              relative px-8 py-3 font-poppins font-bold uppercase tracking-wider
-              text-white overflow-hidden group rounded-lg border-0
-              bg-gradient-to-r from-blackcore-rouge via-blue-500 to-cyan-500
-              hover:from-cyan-500 hover:via-blue-500 hover:to-blackcore-rouge
-              transition-all duration-500 shadow-lg hover:shadow-2xl hover:shadow-blackcore-rouge/50
-              disabled:bg-gray-400 disabled:cursor-not-allowed disabled:shadow-none
-            `}
+            className="relative px-8 py-4 font-bold uppercase tracking-wider
+              text-white overflow-hidden group rounded-xl border-0
+              bg-gradient-to-r from-[#00CFFF] via-[#A63DFF] to-[#00CFFF]
+              hover:shadow-[0_0_40px_rgba(0,207,255,0.6)]
+              transition-all duration-500
+              disabled:bg-gray-600 disabled:cursor-not-allowed disabled:shadow-none
+              disabled:opacity-50"
           >
             <span className="relative z-10 flex items-center gap-2">
               {isSaving ? (
@@ -794,12 +869,10 @@ export function LinkedInConfigInterface() {
               </span>
             </span>
 
-            <div className="
-              absolute inset-0 bg-gradient-to-r 
+            <div className="absolute inset-0 bg-gradient-to-r 
               from-transparent via-white/20 to-transparent
               -translate-x-full group-hover:translate-x-full
-              transition-transform duration-700
-            "></div>
+              transition-transform duration-700"></div>
           </button>
         </div>
       </div>
