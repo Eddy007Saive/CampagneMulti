@@ -1,15 +1,13 @@
 import apiClient from "@/utils/ApiClient";
 
 
-const CONTACTS_ENDPOINT = '/ghl';
+const CONTACTS_ENDPOINT = '/coldMail';
 
 
 // Créer un nouveau contact
-export const testConnection = async (data) => {
+export const testConnection = async (apikey) => {
   try {
-    const response = await apiClient.post(`${CONTACTS_ENDPOINT}/test`, data);
-    console.log(response);
-    
+    const response = await apiClient.post(`${CONTACTS_ENDPOINT}/test`, {apikey:apikey});
     return response.data
   } catch (error) {
     throw {
