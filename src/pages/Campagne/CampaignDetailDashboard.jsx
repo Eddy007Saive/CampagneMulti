@@ -98,8 +98,6 @@ const useSSE = () => {
         body: JSON.stringify(payload),
       });
 
-      console.log(response);
-      
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
