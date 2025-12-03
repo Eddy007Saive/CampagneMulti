@@ -1,6 +1,7 @@
 import apiClient from "@/utils/ApiClient";
 
 
+
 const CONTACTS_ENDPOINT = '/coldMail';
 
 
@@ -40,4 +41,20 @@ try {
     };
   }
 }
+
+export const getCampaignDetails=async(campaignId) =>{
+  try {
+      const response = await apiClient.get(`${CONTACTS_ENDPOINT}/emelia/${campaignId}`);
+      return response.data
+    } catch (error) {
+      console.log(error);
+      throw { 
+        response: {
+          data: {
+            errors: error.response?.data?.error || error.response?.data?.message || 'Erreur lors de la création du contact' 
+          }
+        }
+      };
+    }
+  }
 
