@@ -601,7 +601,7 @@ export const Step4ColdEmail = ({
                                 onChange={(e) => setFormData(prev => ({ ...prev, coldDelayAfterFollowUp: e.target.value }))}
                                 className={`w-24 p-3 border rounded-lg text-center focus:ring-2 focus:ring-blue-500 bg-gray-700 text-white ${stepValidationErrors.coldDelayAfterFollowUp ? 'border-red-500' : 'border-gray-600'
                                     }`}
-                                placeholder="3"
+                                placeholder="0"
                             />
                             <span className="text-gray-400">jour{formData.coldDelayAfterFollowUp > 1 ? 's' : ''}</span>
                         </div>
@@ -1202,7 +1202,7 @@ export const Step4ColdEmail = ({
                                                 <div className="p-3 bg-blue-900/20 border border-blue-600 rounded-lg">
                                                     <p className="text-blue-300 text-xs mb-2">💡 Variables disponibles :</p>
                                                     <div className="flex flex-wrap gap-2">
-                                                        {['{Prénom}', '{Nom}', '{Entreprise}', '{Poste}', '{Email}'].map(variable => (
+                                                        {['{{firstName}}', '{{lastName}}', '{{email}}'].map(variable => (
                                                             <code
                                                                 key={variable}
                                                                 onClick={() => {
@@ -1454,7 +1454,7 @@ export const Step4ColdEmail = ({
                                                 <div className="p-3 bg-blue-900/20 border border-blue-600 rounded-lg">
                                                     <p className="text-blue-300 text-xs mb-2">💡 Variables disponibles :</p>
                                                     <div className="flex flex-wrap gap-2">
-                                                        {['{Prénom}', '{Nom}', '{Entreprise}', '{Poste}', '{Email}'].map(variable => (
+                                                        {['{{firstName}}', '{{lastName}}', '{{email}}'].map(variable => (
                                                             <code
                                                                 key={variable}
                                                                 onClick={() => {
