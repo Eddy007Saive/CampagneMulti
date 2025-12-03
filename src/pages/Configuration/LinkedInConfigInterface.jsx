@@ -17,7 +17,8 @@ export function LinkedInConfigInterface() {
     status: 'Actif',
     userId: null,
     emeliaApiKey: '',
-    ghlApiKey: ''
+    ghlApiKey: '',
+    ghlLocationId: ''
   });
 
   const [quota, setQuota] = useState({
@@ -36,6 +37,8 @@ export function LinkedInConfigInterface() {
   const [currentUser, setCurrentUser] = useState(null);
   const [isTestingEmelia, setIsTestingEmelia] = useState(false);
   const [isTestingGhl, setIsTestingGhl] = useState(false);
+  const [isEditingEmelia, setIsEditingEmelia] = useState(false);
+  const [isEditingGhl, setIsEditingGhl] = useState(false);
 
   // Récupérer l'utilisateur depuis le localStorage
   useEffect(() => {
@@ -78,6 +81,8 @@ export function LinkedInConfigInterface() {
     setIsLoading(true);
     try {
       const status = await getSystemStatus(currentUser);
+      console.log(status);
+
 
       if (status) {
         setSystemStatus(status);
@@ -92,8 +97,12 @@ export function LinkedInConfigInterface() {
             userId: currentUser?.id,
             emeliaApiKey: status.configuration.emeliaApiKey || '',
             ghlApiKey: status.configuration.ghlApiKey || '',
-            ghlLocationId: status.configuration.ghlLocationId || '' // NOUVEAU
+            ghlLocationId: status.configuration.ghlLocationId || ''
           });
+
+          // Initialiser les états d'édition basés sur l'existence des clés
+          setIsEditingEmelia(!status.configuration.emeliaApiKey);
+          setIsEditingGhl(!status.configuration.ghlApiKey);
         }
 
         // Charger le quota
@@ -103,6 +112,9 @@ export function LinkedInConfigInterface() {
 
         // Mettre à jour le statut de validation
         if (status.validation) {
+          const emeliaValid = status.validation.details?.emeliaValid || false;
+          const ghlValid = status.validation.details?.ghlValid || false;
+
           setValidationStatus({
             liAt: {
               valid: status.validation.details?.cookieValid || false,
@@ -115,6 +127,14 @@ export function LinkedInConfigInterface() {
             userAgent: {
               valid: status.validation.details?.userAgentValid || false,
               message: status.validation.details?.userAgentValid ? 'User-Agent valide' : 'User-Agent invalide'
+            },
+            emeliaApiKey: {
+              valid: emeliaValid,
+              message: emeliaValid ? 'Connexion active' : ''
+            },
+            ghlApiKey: {
+              valid: ghlValid,
+              message: ghlValid ? 'Connexion active' : ''
             }
           });
         }
@@ -201,6 +221,7 @@ export function LinkedInConfigInterface() {
             message: 'Connexion réussie'
           }
         }));
+        setIsEditingEmelia(false);
       } else {
         showNotification('❌ Échec de connexion Emelia: ' + (result.error || 'Erreur inconnue'), 'error');
         setValidationStatus(prev => ({
@@ -234,9 +255,9 @@ export function LinkedInConfigInterface() {
 
     setIsTestingGhl(true);
     try {
-      const response= await testConnectionGHL(config);
+      const response = await testConnectionGHL(config);
       console.log(response);
-      
+
       if (response.success) {
         showNotification('✅ Connexion GHL réussie !', 'success');
         setValidationStatus(prev => ({
@@ -250,6 +271,7 @@ export function LinkedInConfigInterface() {
             message: 'Location ID validé'
           }
         }));
+        setIsEditingGhl(false);
       } else {
         showNotification('❌ Échec de connexion GHL', 'error');
         setValidationStatus(prev => ({
@@ -292,7 +314,7 @@ export function LinkedInConfigInterface() {
         userId: config.userId,
         emeliaApiKey: config.emeliaApiKey,
         ghlApiKey: config.ghlApiKey,
-        ghlLocationId: config.ghlLocationId // NOUVEAU
+        ghlLocationId: config.ghlLocationId
       };
 
       const result = await upsertConfiguration(configData);
@@ -325,7 +347,6 @@ export function LinkedInConfigInterface() {
       </div>
     );
   }
-
   if (!currentUser) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-bleu-fonce/90 to-noir-absolu/80 text-white flex items-center justify-center">
@@ -371,11 +392,10 @@ export function LinkedInConfigInterface() {
         {/* System Status Card */}
         {systemStatus && (
           <div className="mb-6">
-            <div className={`rounded-xl border p-4 backdrop-blur-sm ${
-              systemStatus.systemReady 
-                ? 'bg-green-500/10 border-green-400/30 shadow-[0_0_20px_rgba(34,197,94,0.2)]' 
-                : 'bg-red-500/10 border-red-400/30 shadow-[0_0_20px_rgba(239,68,68,0.2)]'
-            }`}>
+            <div className={`rounded-xl border p-4 backdrop-blur-sm ${systemStatus.systemReady
+              ? 'bg-green-500/10 border-green-400/30 shadow-[0_0_20px_rgba(34,197,94,0.2)]'
+              : 'bg-red-500/10 border-red-400/30 shadow-[0_0_20px_rgba(239,68,68,0.2)]'
+              }`}>
               <div className="flex items-center gap-3">
                 {systemStatus.systemReady ? (
                   <CheckCircle className="w-5 h-5 text-green-400" />
@@ -387,8 +407,8 @@ export function LinkedInConfigInterface() {
                     {systemStatus.systemReady ? 'Système Opérationnel' : 'Configuration Requise'}
                   </h3>
                   <p className="text-sm text-[#00CFFF]/70">
-                    {systemStatus.systemReady 
-                      ? 'Votre configuration est complète et fonctionnelle' 
+                    {systemStatus.systemReady
+                      ? 'Votre configuration est complète et fonctionnelle'
                       : 'Veuillez compléter la configuration'
                     }
                   </p>
@@ -419,7 +439,7 @@ export function LinkedInConfigInterface() {
                   <p className="text-sm text-[#00CFFF]/70">connexions restantes</p>
                 </div>
               </div>
-              
+
               {quota.derniereMiseAJour && (
                 <div className="mt-4 pt-4 border-t border-[#00CFFF]/20">
                   <p className="text-sm text-[#00CFFF]/60">
@@ -448,7 +468,7 @@ export function LinkedInConfigInterface() {
                 <h3 className="font-semibold text-[#00CFFF]">Configuration des Cookies</h3>
               </div>
             </div>
-            
+
             <div className="p-6">
               <div>
                 <label className="block text-sm font-medium text-[#00CFFF]/90 mb-2">
@@ -474,9 +494,8 @@ export function LinkedInConfigInterface() {
                   </button>
                 </div>
                 {validationStatus.liAt && (
-                  <div className={`mt-2 flex items-center gap-2 text-sm ${
-                    validationStatus.liAt.valid ? 'text-green-400' : 'text-red-400'
-                  }`}>
+                  <div className={`mt-2 flex items-center gap-2 text-sm ${validationStatus.liAt.valid ? 'text-green-400' : 'text-red-400'
+                    }`}>
                     {validationStatus.liAt.valid ? (
                       <CheckCircle className="w-4 h-4" />
                     ) : (
@@ -507,7 +526,7 @@ export function LinkedInConfigInterface() {
                 </button>
               </div>
             </div>
-            
+
             <div className="p-6">
               <div>
                 <label className="block text-sm font-medium text-[#00CFFF]/90 mb-2">
@@ -526,9 +545,8 @@ export function LinkedInConfigInterface() {
                   />
                 </div>
                 {validationStatus.userAgent && (
-                  <div className={`mt-2 flex items-center gap-2 text-sm ${
-                    validationStatus.userAgent.valid ? 'text-green-400' : 'text-red-400'
-                  }`}>
+                  <div className={`mt-2 flex items-center gap-2 text-sm ${validationStatus.userAgent.valid ? 'text-green-400' : 'text-red-400'
+                    }`}>
                     {validationStatus.userAgent.valid ? (
                       <CheckCircle className="w-4 h-4" />
                     ) : (
@@ -554,7 +572,7 @@ export function LinkedInConfigInterface() {
                 <h3 className="font-semibold text-[#00CFFF]">Configuration Email</h3>
               </div>
             </div>
-            
+
             <div className="p-6">
               <div>
                 <label className="block text-sm font-medium text-[#00CFFF]/90 mb-2">
@@ -574,9 +592,8 @@ export function LinkedInConfigInterface() {
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#00CFFF]/60" />
                 </div>
                 {validationStatus.email && (
-                  <div className={`mt-2 flex items-center gap-2 text-sm ${
-                    validationStatus.email.valid ? 'text-green-400' : 'text-red-400'
-                  }`}>
+                  <div className={`mt-2 flex items-center gap-2 text-sm ${validationStatus.email.valid ? 'text-green-400' : 'text-red-400'
+                    }`}>
                     {validationStatus.email.valid ? (
                       <CheckCircle className="w-4 h-4" />
                     ) : (
@@ -602,64 +619,91 @@ export function LinkedInConfigInterface() {
                 <h3 className="font-semibold text-[#00CFFF]">API Emelia</h3>
               </div>
             </div>
-            
+
             <div className="p-6">
               <div>
                 <label className="block text-sm font-medium text-[#00CFFF]/90 mb-2">
                   Clé API Emelia
                 </label>
-                <div className="flex gap-2 flex-col sm:flex-row">
-                  <div className="relative flex-1">
-                    <input
-                      type={showEmeliaKey ? "text" : "password"}
-                      value={config.emeliaApiKey}
-                      onChange={(e) => handleInputChange('emeliaApiKey', e.target.value)}
-                      placeholder="Entrez votre clé API Emelia..."
-                      className="w-full p-3 bg-[#0B1030]/50 border border-[#00CFFF]/40 rounded-lg 
-                        focus:ring-2 focus:ring-[#A63DFF] focus:border-[#A63DFF] 
-                        text-white placeholder-[#00CFFF]/50 pr-10
-                        transition-all duration-300 hover:border-[#00CFFF]/60"
-                    />
+                {isEditingEmelia ? (
+                  // État connecté
+                  <div className="flex items-center justify-between p-4 bg-green-500/10 border border-green-400/30 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <CheckCircle className="w-5 h-5 text-green-400" />
+                      <div>
+                        <p className="text-green-400 font-semibold">Déjà connecté</p>
+                        <p className="text-sm text-green-400/70">Connexion Emelia active</p>
+                      </div>
+                    </div>
                     <button
-                      type="button"
-                      onClick={() => setShowEmeliaKey(!showEmeliaKey)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#00CFFF]/60 hover:text-[#00CFFF] transition-colors"
+                      onClick={() => setIsEditingEmelia(false)}
+                      className="px-4 py-2 bg-gradient-to-r from-[#00CFFF] to-[#A63DFF] 
+        text-white font-semibold rounded-lg text-sm
+        hover:shadow-[0_0_20px_rgba(0,207,255,0.5)] transition-all duration-300"
                     >
-                      {showEmeliaKey ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                      Modifier
                     </button>
                   </div>
-                  <button
-                    onClick={handleTestEmeliaConnection}
-                    disabled={isTestingEmelia || !config.emeliaApiKey}
-                    className="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 
-                      text-white font-semibold rounded-lg
-                      hover:shadow-[0_0_20px_rgba(34,197,94,0.5)] transition-all duration-300 
-                      disabled:opacity-50 disabled:cursor-not-allowed 
-                      flex items-center justify-center gap-2 whitespace-nowrap
-                      sm:w-auto w-full"
-                  >
-                    {isTestingEmelia ? (
-                      <>
-                        <Loader className="w-4 h-4 animate-spin" />
-                        Test...
-                      </>
-                    ) : (
-                      'Tester connexion'
+                ) : (
+                  // État édition (inputs)
+                  <>
+                    <div className="flex gap-2 flex-col sm:flex-row">
+                      <div className="relative flex-1">
+                        <input
+                          type={showEmeliaKey ? "text" : "password"}
+                          value={config.emeliaApiKey}
+                          onChange={(e) => handleInputChange('emeliaApiKey', e.target.value)}
+                          placeholder="Entrez votre clé API Emelia..."
+                          className="w-full p-3 bg-[#0B1030]/50 border border-[#00CFFF]/40 rounded-lg 
+            focus:ring-2 focus:ring-[#A63DFF] focus:border-[#A63DFF] 
+            text-white placeholder-[#00CFFF]/50 pr-10
+            transition-all duration-300 hover:border-[#00CFFF]/60"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowEmeliaKey(!showEmeliaKey)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-[#00CFFF]/60 hover:text-[#00CFFF] transition-colors"
+                        >
+                          {showEmeliaKey ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                        </button>
+                      </div>
+                      <button
+                        onClick={handleTestEmeliaConnection}
+                        disabled={isTestingEmelia || !config.emeliaApiKey}
+                        className="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 
+          text-white font-semibold rounded-lg
+          hover:shadow-[0_0_20px_rgba(34,197,94,0.5)] transition-all duration-300 
+          disabled:opacity-50 disabled:cursor-not-allowed 
+          flex items-center justify-center gap-2 whitespace-nowrap
+          sm:w-auto w-full"
+                      >
+                        {isTestingEmelia ? (
+                          <>
+                            <Loader className="w-4 h-4 animate-spin" />
+                            Test...
+                          </>
+                        ) : (
+                          'Tester connexion'
+                        )}
+                      </button>
+                    </div>
+                    {validationStatus.emeliaApiKey && !validationStatus.emeliaApiKey.valid && (
+                      <div className="mt-2 flex items-center gap-2 text-sm text-red-400">
+                        <AlertCircle className="w-4 h-4" />
+                        {validationStatus.emeliaApiKey.message}
+                      </div>
                     )}
-                  </button>
-                </div>
-                {validationStatus.emeliaApiKey && (
-                  <div className={`mt-2 flex items-center gap-2 text-sm ${
-                    validationStatus.emeliaApiKey.valid ? 'text-green-400' : 'text-red-400'
-                  }`}>
-                    {validationStatus.emeliaApiKey.valid ? (
-                      <CheckCircle className="w-4 h-4" />
-                    ) : (
-                      <AlertCircle className="w-4 h-4" />
+                    {isEditingEmelia && config.emeliaApiKey && (
+                      <button
+                        onClick={() => setIsEditingEmelia(false)}
+                        className="mt-2 text-sm text-[#00CFFF]/70 hover:text-[#00CFFF] transition-colors"
+                      >
+                        Annuler
+                      </button>
                     )}
-                    {validationStatus.emeliaApiKey.message}
-                  </div>
+                  </>
                 )}
+
                 <p className="mt-2 text-sm text-[#00CFFF]/60">
                   Permet l'intégration avec Emelia pour l'envoi d'emails
                 </p>
@@ -677,101 +721,122 @@ export function LinkedInConfigInterface() {
                 <h3 className="font-semibold text-[#00CFFF]">API GoHighLevel</h3>
               </div>
             </div>
-            
+
             <div className="p-6 space-y-6">
               {/* Clé API GHL */}
               <div>
-                <label className="block text-sm font-medium text-[#00CFFF]/90 mb-2">
-                  Clé API GHL
-                </label>
-                <div className="flex gap-2 flex-col sm:flex-row">
-                  <div className="relative flex-1">
-                    <input
-                      type={showGhlKey ? "text" : "password"}
-                      value={config.ghlApiKey}
-                      onChange={(e) => handleInputChange('ghlApiKey', e.target.value)}
-                      placeholder="Entrez votre clé API GHL..."
-                      className="w-full p-3 bg-[#0B1030]/50 border border-[#00CFFF]/40 rounded-lg 
-                        focus:ring-2 focus:ring-[#A63DFF] focus:border-[#A63DFF] 
-                        text-white placeholder-[#00CFFF]/50 pr-10
-                        transition-all duration-300 hover:border-[#00CFFF]/60"
-                    />
+                {isEditingGhl ? (
+                  // État connecté
+                  <div className="flex items-center justify-between p-4 bg-green-500/10 border border-green-400/30 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <CheckCircle className="w-5 h-5 text-green-400" />
+                      <div>
+                        <p className="text-green-400 font-semibold">Déjà connecté</p>
+                        <p className="text-sm text-green-400/70">Connexion GHL active</p>
+                      </div>
+                    </div>
                     <button
-                      type="button"
-                      onClick={() => setShowGhlKey(!showGhlKey)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#00CFFF]/60 hover:text-[#00CFFF] transition-colors"
+                      onClick={() => setIsEditingGhl(false)}
+                      className="px-4 py-2 bg-gradient-to-r from-[#00CFFF] to-[#A63DFF] 
+              text-white font-semibold rounded-lg text-sm
+              hover:shadow-[0_0_20px_rgba(0,207,255,0.5)] transition-all duration-300"
                     >
-                      {showGhlKey ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                      Modifier
                     </button>
                   </div>
-                </div>
-                {validationStatus.ghlApiKey && (
-                  <div className={`mt-2 flex items-center gap-2 text-sm ${
-                    validationStatus.ghlApiKey.valid ? 'text-green-400' : 'text-red-400'
-                  }`}>
-                    {validationStatus.ghlApiKey.valid ? (
-                      <CheckCircle className="w-4 h-4" />
-                    ) : (
-                      <AlertCircle className="w-4 h-4" />
-                    )}
-                    {validationStatus.ghlApiKey.message}
-                  </div>
-                )}
-              </div>
+                ) : (
+                  // État édition (inputs)
+                  <div className="space-y-6">
+                    {/* Clé API GHL */}
+                    <div>
+                      <label className="block text-sm font-medium text-[#00CFFF]/90 mb-2">
+                        Clé API GHL
+                      </label>
+                      <div className="relative">
+                        <input
+                          type={showGhlKey ? "text" : "password"}
+                          value={config.ghlApiKey}
+                          onChange={(e) => handleInputChange('ghlApiKey', e.target.value)}
+                          placeholder="Entrez votre clé API GHL..."
+                          className="w-full p-3 bg-[#0B1030]/50 border border-[#00CFFF]/40 rounded-lg 
+                  focus:ring-2 focus:ring-[#A63DFF] focus:border-[#A63DFF] 
+                  text-white placeholder-[#00CFFF]/50 pr-10
+                  transition-all duration-300 hover:border-[#00CFFF]/60"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowGhlKey(!showGhlKey)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-[#00CFFF]/60 hover:text-[#00CFFF] transition-colors"
+                        >
+                          {showGhlKey ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                        </button>
+                      </div>
+                      {validationStatus.ghlApiKey && !validationStatus.ghlApiKey.valid && (
+                        <div className="mt-2 flex items-center gap-2 text-sm text-red-400">
+                          <AlertCircle className="w-4 h-4" />
+                          {validationStatus.ghlApiKey.message}
+                        </div>
+                      )}
+                    </div>
 
-              {/* Location ID */}
-              <div>
-                <label className="block text-sm font-medium text-[#00CFFF]/90 mb-2">
-                  Location ID
-                </label>
-                <div className="flex gap-2 flex-col sm:flex-row">
-                  <div className="relative flex-1">
-                    <input
-                      type="text"
-                      value={config.ghlLocationId}
-                      onChange={(e) => handleInputChange('ghlLocationId', e.target.value)}
-                      placeholder="Entrez votre Location ID..."
-                      className="w-full p-3 bg-[#0B1030]/50 border border-[#00CFFF]/40 rounded-lg 
-                        focus:ring-2 focus:ring-[#A63DFF] focus:border-[#A63DFF] 
-                        text-white placeholder-[#00CFFF]/50
-                        transition-all duration-300 hover:border-[#00CFFF]/60"
-                    />
-                  </div>
-                  <button
-                    onClick={handleTestGhlConnection}
-                    disabled={isTestingGhl || !config.ghlApiKey || !config.ghlLocationId}
-                    className="px-6 py-3 bg-gradient-to-r from-[#A63DFF] to-[#00CFFF] 
-                      text-white font-semibold rounded-lg
-                      hover:shadow-[0_0_25px_rgba(166,61,255,0.5)] transition-all duration-300 
-                      disabled:opacity-50 disabled:cursor-not-allowed 
-                      flex items-center justify-center gap-2 whitespace-nowrap
-                      sm:w-auto w-full"
-                  >
-                    {isTestingGhl ? (
-                      <>
-                        <Loader className="w-4 h-4 animate-spin" />
-                        Test...
-                      </>
-                    ) : (
-                      'Tester connexion'
+                    {/* Location ID */}
+                    <div>
+                      <label className="block text-sm font-medium text-[#00CFFF]/90 mb-2">
+                        Location ID
+                      </label>
+                      <div className="flex gap-2 flex-col sm:flex-row">
+                        <input
+                          type="text"
+                          value={config.ghlLocationId}
+                          onChange={(e) => handleInputChange('ghlLocationId', e.target.value)}
+                          placeholder="Entrez votre Location ID..."
+                          className="flex-1 p-3 bg-[#0B1030]/50 border border-[#00CFFF]/40 rounded-lg 
+                  focus:ring-2 focus:ring-[#A63DFF] focus:border-[#A63DFF] 
+                  text-white placeholder-[#00CFFF]/50
+                  transition-all duration-300 hover:border-[#00CFFF]/60"
+                        />
+                        <button
+                          onClick={handleTestGhlConnection}
+                          disabled={isTestingGhl || !config.ghlApiKey || !config.ghlLocationId}
+                          className="px-6 py-3 bg-gradient-to-r from-[#A63DFF] to-[#00CFFF] 
+                  text-white font-semibold rounded-lg
+                  hover:shadow-[0_0_25px_rgba(166,61,255,0.5)] transition-all duration-300 
+                  disabled:opacity-50 disabled:cursor-not-allowed 
+                  flex items-center justify-center gap-2 whitespace-nowrap
+                  sm:w-auto w-full"
+                        >
+                          {isTestingGhl ? (
+                            <>
+                              <Loader className="w-4 h-4 animate-spin" />
+                              Test...
+                            </>
+                          ) : (
+                            'Tester connexion'
+                          )}
+                        </button>
+                      </div>
+                      {validationStatus.ghlLocationId && !validationStatus.ghlLocationId.valid && (
+                        <div className="mt-2 flex items-center gap-2 text-sm text-red-400">
+                          <AlertCircle className="w-4 h-4" />
+                          {validationStatus.ghlLocationId.message}
+                        </div>
+                      )}
+                    </div>
+
+                    {isEditingGhl && config.ghlApiKey && (
+                      <button
+                        onClick={() => setIsEditingGhl(false)}
+                        className="text-sm text-[#00CFFF]/70 hover:text-[#00CFFF] transition-colors"
+                      >
+                        Annuler
+                      </button>
                     )}
-                  </button>
-                </div>
-                {validationStatus.ghlLocationId && (
-                  <div className={`mt-2 flex items-center gap-2 text-sm ${
-                    validationStatus.ghlLocationId.valid ? 'text-green-400' : 'text-red-400'
-                  }`}>
-                    {validationStatus.ghlLocationId.valid ? (
-                      <CheckCircle className="w-4 h-4" />
-                    ) : (
-                      <AlertCircle className="w-4 h-4" />
-                    )}
-                    {validationStatus.ghlLocationId.message}
+
+                    <p className="text-sm text-[#00CFFF]/60">
+                      Permet l'intégration avec GoHighLevel pour la gestion CRM
+                    </p>
                   </div>
                 )}
-                <p className="mt-2 text-sm text-[#00CFFF]/60">
-                  Permet l'intégration avec GoHighLevel pour la gestion CRM
-                </p>
               </div>
             </div>
           </div>
@@ -786,7 +851,7 @@ export function LinkedInConfigInterface() {
                 <h3 className="font-semibold text-[#00CFFF]">Statut du Système</h3>
               </div>
             </div>
-            
+
             <div className="p-6">
               <div>
                 <label className="block text-sm font-medium text-[#00CFFF]/90 mb-2">

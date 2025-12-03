@@ -8,6 +8,7 @@ const CONTACTS_ENDPOINT = '/coldMail';
 export const testConnection = async (apikey) => {
   try {
     const response = await apiClient.post(`${CONTACTS_ENDPOINT}/test`, {apikey:apikey});
+    
     return response.data
   } catch (error) {
     throw {
@@ -19,4 +20,24 @@ export const testConnection = async (apikey) => {
     };
   }
 };
+
+
+export const getCampaigns=async() =>{
+try {
+    const response = await apiClient.get(`${CONTACTS_ENDPOINT}/emelia`);
+    console.log(response);
+    
+    return response.data
+  } catch (error) {
+    console.log(error);
+    
+    throw {
+      response: {
+        data: {
+          errors: error.response?.data?.error || error.response?.data?.message || 'Erreur lors de la création du contact'
+        }
+      }
+    };
+  }
+}
 

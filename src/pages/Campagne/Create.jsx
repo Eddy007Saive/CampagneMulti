@@ -28,7 +28,7 @@ import { ToastContainer } from "react-toastify";
 import 'react-toastify/dist/ReactToastify.css';
 import toastify from "@/utils/toastify";
 import { useNavigate } from 'react-router-dom';
-import { testConnection  } from "@/services/Emelia";
+import { testConnection } from "@/services/Emelia";
 import { Step0GeneralInfo } from "@/components/steps/Step0GeneralInfo";
 import { Step1CriteresPro } from "@/components/steps/Step1CriteresPro";
 import { Step2Planning } from "@/components/steps/Step2Planning";
@@ -119,7 +119,7 @@ export function Create() {
 
   const [emailStepSelected, setEmailStepSelected] = useState(formData.emailSequence[0]?.id);
 
- ;
+  ;
 
 
 
@@ -128,16 +128,8 @@ export function Create() {
     { id: 1, title: "Critères professionnels", icon: Building },
     { id: 2, title: "Planning et fréquence", icon: Calendar },
     { id: 3, title: "Message et relances", icon: MessageSquare },
-    { id: 4, title: "Cold Email (optionnel)", icon: MessageSquare } // 🆕 NOUVEAU
+    { id: 4, title: "Cold Email (optionnel)", icon: MessageSquare } 
   ];
-
-
-
- 
-
-
-
-
 
   const methods = useForm({
     mode: 'onChange',
@@ -635,32 +627,32 @@ export function Create() {
   const renderStep = () => {
     switch (currentStep) {
       case 0:
-        return <Step0GeneralInfo 
+        return <Step0GeneralInfo
           formData={formData}
           handleChange={handleChange}
           stepValidationErrors={stepValidationErrors}
         />;
 
       case 1:
-         return <Step1CriteresPro 
+        return <Step1CriteresPro
           formData={formData}
           handleChange={handleChange}
           stepValidationErrors={stepValidationErrors}
         />;
-       
+
 
       case 2:
-         return <Step2Planning 
+        return <Step2Planning
           formData={formData}
           handleChange={handleChange}
           stepValidationErrors={stepValidationErrors}
           handleJourToggle={handleJourToggle}
           appliquerPlanningPredefini={appliquerPlanningPredefini}
         />;
-       
+
 
       case 3:
-        return <Step3Messages 
+        return <Step3Messages
           formData={formData}
           handleChange={handleChange}
           stepValidationErrors={stepValidationErrors}
@@ -674,10 +666,10 @@ export function Create() {
           getTemplatesSuggeres={getTemplatesSuggeres}
           setFormData={setFormData}
         />;
-        
+
 
       case 4:
-         return <Step4ColdEmail 
+        return <Step4ColdEmail
           formData={formData}
           setFormData={setFormData}
           stepValidationErrors={stepValidationErrors}
