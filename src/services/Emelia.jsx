@@ -26,7 +26,6 @@ export const testConnection = async (apikey) => {
 export const getCampaigns=async() =>{
 try {
     const response = await apiClient.get(`${CONTACTS_ENDPOINT}/emelia`);
-    console.log(response);
     
     return response.data
   } catch (error) {

@@ -496,12 +496,9 @@ export function Create() {
         "Statut d'enrichissement": "En attente",
         "Relances": JSON.stringify(relancesClean),
         // 🆕 COLD EMAIL
-        "ColdEmail": formData.coldEmail,
         "coldDelayAfterFollowUp": formData.coldEmail ? parseInt(formData.coldDelayAfterFollowUp) : null,
         "coldCampaignIdEmelia": formData.coldCampaignIdEmelia || "",
         "ColdEmail": formData.coldEmail,
-        "coldDelayAfterFollowUp": formData.coldEmail ? parseInt(formData.coldDelayAfterFollowUp) : null,
-        "coldCampaignIdEmelia": formData.coldCampaignIdEmelia || "",
         "emeliaTimezone": formData.emeliaTimezone || "",
         "emeliaMaxNewPerDay": formData.emeliaMaxNewPerDay ? parseInt(formData.emeliaMaxNewPerDay) : null,
         "emeliaDailyLimit": formData.emeliaDailyLimit ? parseInt(formData.emeliaDailyLimit) : null,
