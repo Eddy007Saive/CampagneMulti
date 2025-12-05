@@ -50,7 +50,13 @@ import {
   MapPinIcon,
   BriefcaseIcon,
   ArrowDownTrayIcon,
-  PauseCircleIcon
+  PauseCircleIcon,
+  CursorArrowRippleIcon,
+  InboxIcon,
+  PaperAirplaneIcon,
+  ExclamationCircleIcon,
+  SignalIcon,
+  ClipboardDocumentCheckIcon
 } from "@heroicons/react/24/outline";
 import {
   AreaChart,
@@ -65,6 +71,9 @@ import {
   Cell,
   BarChart,
   Bar,
+  LineChart,
+  Legend,
+  Line
 } from "recharts";
 
 // Import des services Airtable
@@ -185,6 +194,46 @@ export function CampaignDetailDashboard() {
     profilesValideAvecMessage: 0,
   });
 
+    const [emeliaStats, setEmeliaStats] = useState({
+    totalSent: 892,
+    delivered: 854,
+    deliveryRate: 95.7,
+    opened: 342,
+    openRate: 40.0,
+    clicked: 89,
+    clickRate: 10.4,
+    replied: 156,
+    replyRate: 18.3,
+    bounced: 38,
+    bounceRate: 4.3,
+    unsubscribed: 12,
+    unsubscribeRate: 1.4,
+    lastSync: new Date(),
+    campaignStatus: "active",
+    dailyLimit: 50,
+    sent24h: 42,
+  });
+
+  const [emeliaActivities, setEmeliaActivities] = useState([
+    { id: 1, type: "opened", contact: "marie.martin@email.com", timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000), subject: "Opportunité développeur React" },
+    { id: 2, type: "clicked", contact: "john.doe@company.fr", timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000), subject: "Poste de Lead Dev" },
+    { id: 3, type: "sent", contact: "12 nouveaux emails", timestamp: new Date(Date.now() - 8 * 60 * 60 * 1000), count: 12 },
+    { id: 4, type: "replied", contact: "sophie.durand@startup.io", timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000), subject: "Re: Opportunité" },
+    { id: 5, type: "bounced", contact: "invalid@nomail.xyz", timestamp: new Date(Date.now() - 36 * 60 * 60 * 1000), subject: "Proposition" },
+  ]);
+
+  const [emeliaPerformanceData] = useState([
+    { date: "Lun", sent: 45, delivered: 43, opened: 18, clicked: 4, replied: 3 },
+    { date: "Mar", sent: 50, delivered: 48, opened: 22, clicked: 6, replied: 5 },
+    { date: "Mer", sent: 48, delivered: 46, opened: 20, clicked: 5, replied: 4 },
+    { date: "Jeu", sent: 52, delivered: 50, opened: 25, clicked: 8, replied: 6 },
+    { date: "Ven", sent: 47, delivered: 45, opened: 19, clicked: 4, replied: 2 },
+    { date: "Sam", sent: 0, delivered: 0, opened: 8, clicked: 2, replied: 1 },
+    { date: "Dim", sent: 0, delivered: 0, opened: 5, clicked: 1, replied: 0 },
+  ]);
+
+  const [syncingEmelia, setSyncingEmelia] = useState(false);
+
   // États UI
   const [activeTab, setActiveTab] = useState("overview");
   const [isTrierDialogOpen, setIsTrierDialogOpen] = useState(false);
@@ -217,6 +266,71 @@ export function CampaignDetailDashboard() {
       // Ici vous pouvez ajouter votre système de notification préféré
     }
   };
+
+  const handleSyncEmelia = () => {
+    setSyncingEmelia(true);
+    setTimeout(() => {
+      setEmeliaStats(prev => ({ ...prev, lastSync: new Date() }));
+      setSyncingEmelia(false);
+    }, 2000);
+  };
+
+
+  const ActivityItem = ({ activity }) => {
+    const getIcon = () => {
+      switch (activity.type) {
+        case "opened": return <EyeIcon className="h-5 w-5 text-blue-500" />;
+        case "clicked": return <CursorArrowRippleIcon className="h-5 w-5 text-purple-500" />;
+        case "sent": return <PaperAirplaneIcon className="h-5 w-5 text-green-500" />;
+        case "replied": return <ChatBubbleLeftRightIcon className="h-5 w-5 text-indigo-500" />;
+        case "bounced": return <ExclamationCircleIcon className="h-5 w-5 text-red-500" />;
+        default: return <EnvelopeIcon className="h-5 w-5 text-gray-500" />;
+      }
+    };
+    const getLabel = () => {
+      switch (activity.type) {
+        case "opened": return "a ouvert le message";
+        case "clicked": return "a cliqué sur le lien";
+        case "sent": return "envoyés avec succès";
+        case "replied": return "a répondu";
+        case "bounced": return "bounce (email invalide)";
+        default: return "activité";
+      }
+    };
+    const timeAgo = () => {
+      const hours = Math.floor((Date.now() - activity.timestamp.getTime()) / (1000 * 60 * 60));
+      if (hours < 1) return "Il y a quelques minutes";
+      if (hours < 24) return `Il y a ${hours}h`;
+      const days = Math.floor(hours / 24);
+      return `Il y a ${days}j`;
+    };
+    return (
+      <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+        <div className="mt-0.5">{getIcon()}</div>
+        <div className="flex-1 min-w-0">
+          <Typography variant="small" className="font-medium text-blue-gray-900">
+            {activity.contact} {getLabel()}
+          </Typography>
+          {activity.subject && (
+            <Typography variant="small" className="text-blue-gray-600 truncate">
+              {activity.subject}
+            </Typography>
+          )}
+          <Typography variant="small" className="text-blue-gray-500 text-xs mt-1">
+            {timeAgo()}
+          </Typography>
+        </div>
+      </div>
+    );
+  };
+
+  const emeliaFunnelData = [
+    { name: "Envoyés", value: emeliaStats.totalSent, fill: "#3B82F6" },
+    { name: "Délivrés", value: emeliaStats.delivered, fill: "#10B981" },
+    { name: "Ouverts", value: emeliaStats.opened, fill: "#8B5CF6" },
+    { name: "Cliqués", value: emeliaStats.clicked, fill: "#F59E0B" },
+    { name: "Répondus", value: emeliaStats.replied, fill: "#06B6D4" },
+  ];
 
   // Fonction pour calculer les statistiques à partir des contacts
   const calculateStats = (contacts) => {
@@ -549,6 +663,8 @@ export function CampaignDetailDashboard() {
       setTerminating(false);
     }
   };
+
+
 
   const handlePausedCampaign = async () => {
     try {
@@ -1003,15 +1119,73 @@ export function CampaignDetailDashboard() {
         />
       </div>
 
+      <div className="bg-gradient-to-r from-blue-50 via-purple-50 to-pink-50 rounded-xl p-4 mb-4 border border-blue-200">
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div className="flex items-center gap-2">
+              <SignalIcon className="h-5 w-5 text-blue-600" />
+              <Typography variant="small" className="font-bold text-blue-gray-700">
+                Statistiques Emelia en temps réel
+              </Typography>
+            </div>
+            <div className="flex items-center gap-6 flex-wrap">
+              <div className="flex items-center gap-2">
+                <PaperAirplaneIcon className="h-4 w-4 text-blue-500" />
+                <span className="text-sm font-medium">{emeliaStats.totalSent} envoyés</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircleIcon className="h-4 w-4 text-green-500" />
+                <span className="text-sm font-medium">{emeliaStats.delivered} délivrés ({emeliaStats.deliveryRate}%)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <EyeIcon className="h-4 w-4 text-purple-500" />
+                <span className="text-sm font-medium">{emeliaStats.opened} ouverts ({emeliaStats.openRate}%)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CursorArrowRippleIcon className="h-4 w-4 text-orange-500" />
+                <span className="text-sm font-medium">{emeliaStats.clicked} clics ({emeliaStats.clickRate}%)</span>
+              </div>
+              <Button
+                size="sm"
+                variant="outlined"
+                color="blue"
+                onClick={handleSyncEmelia}
+                disabled={syncingEmelia}
+                className="flex items-center gap-2"
+              >
+                <ArrowPathIcon className={`h-4 w-4 ${syncingEmelia ? 'animate-spin' : ''}`} />
+                Sync
+              </Button>
+            </div>
+          </div>
+        </div>
+
       {/* Onglets */}
       <Tabs value={activeTab} onChange={setActiveTab}>
         <TabsHeader className="rounded-lg bg-blue-gray-50/50">
+        
+
+          
           <Tab value="overview">
             <div className="flex items-center gap-2">
               <ChartPieIcon className="h-4 w-4" />
               Vue d'ensemble
             </div>
           </Tab>
+
+          <Tab value="emelia">
+            <div className="flex items-center gap-2">
+              <SignalIcon className="h-4 w-4" />
+              Emelia
+            </div>
+          </Tab>
+
+          <Tab value="activities">
+            <div className="flex items-center gap-2">
+              <ClipboardDocumentCheckIcon className="h-4 w-4" />
+              Activités
+            </div>
+          </Tab>
+
           <Tab value="performance">
             <div className="flex items-center gap-2">
               <ChartBarIcon className="h-4 w-4" />
@@ -1160,6 +1334,10 @@ export function CampaignDetailDashboard() {
             </div>
           </TabPanel>
 
+          
+
+          
+
           {/* Onglet Performance */}
           <TabPanel value="performance" className="p-0 pt-4">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -1227,6 +1405,26 @@ export function CampaignDetailDashboard() {
                   </ResponsiveContainer>
                 </CardBody>
               </Card>
+
+              <div className="mt-6">
+                <Typography variant="h6" color="blue-gray" className="mb-4">Entonnoir de Conversion Emelia</Typography>
+                <div className="space-y-3">
+                  {emeliaFunnelData.map((item, index) => (
+                    <div key={index}>
+                      <div className="flex justify-between mb-1">
+                        <Typography variant="small">{item.name}</Typography>
+                        <Typography variant="small" className="font-medium">{item.value}</Typography>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-3">
+                        <div
+                          className="h-3 rounded-full transition-all duration-500"
+                          style={{ width: `${(item.value / emeliaStats.totalSent) * 100}%`, backgroundColor: item.fill }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </TabPanel>
 
@@ -1339,6 +1537,167 @@ export function CampaignDetailDashboard() {
               </CardBody>
             </Card>
           </TabPanel>
+
+          <TabPanel value="emelia" className="p-0 pt-4">
+            {/* Header + stats détaillées */}
+            <div className="mb-6">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <Typography variant="h5" color="blue-gray">
+                    Tableau de bord Emelia
+                  </Typography>
+                  <Typography variant="small" className="text-blue-gray-600">
+                    Suivi en temps réel de vos envois
+                  </Typography>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Typography variant="small" className="text-blue-gray-600">
+                    Dernière sync: {emeliaStats.lastSync.toLocaleTimeString('fr-FR')}
+                  </Typography>
+                  <Button
+                    size="sm"
+                    variant="gradient"
+                    color="blue"
+                    onClick={handleSyncEmelia}
+                    disabled={syncingEmelia}
+                    className="flex items-center gap-2"
+                  >
+                    <ArrowPathIcon className={`h-4 w-4 ${syncingEmelia ? 'animate-spin' : ''}`} />
+                    {syncingEmelia ? 'Sync...' : 'Synchroniser'}
+                  </Button>
+                </div>
+              </div>
+
+              <Alert color="blue" icon={<SignalIcon className="h-5 w-5" />} className="mb-6">
+                <Typography variant="small" className="font-medium">
+                  Campagne active • Limite quotidienne: {emeliaStats.dailyLimit} emails/jour • 
+                  Envoyés aujourd'hui: {emeliaStats.sent24h}
+                </Typography>
+              </Alert>
+            </div>
+
+            {/* Grille de stats */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+              <StatCard title="Emails Envoyés" value={emeliaStats.totalSent} subtitle="Total de la campagne" icon={PaperAirplaneIcon} color="blue" />
+              <StatCard title="Taux de Délivrabilité" value={`${emeliaStats.deliveryRate}%`} subtitle={`${emeliaStats.delivered} délivrés`} icon={CheckCircleIcon} color="green" badge={emeliaStats.deliveryRate > 95 ? "Excellent" : "Moyen"} />
+              <StatCard title="Taux d'Ouverture" value={`${emeliaStats.openRate}%`} subtitle={`${emeliaStats.opened} ouvertures`} icon={EyeIcon} color="purple" badge={emeliaStats.openRate > 30 ? "Excellent" : emeliaStats.openRate > 15 ? "Moyen" : "Faible"} />
+              <StatCard title="Taux de Clic" value={`${emeliaStats.clickRate}%`} subtitle={`${emeliaStats.clicked} clics`} icon={CursorArrowRippleIcon} color="orange" />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+              <StatCard title="Taux de Réponse" value={`${emeliaStats.replyRate}%`} subtitle={`${emeliaStats.replied} réponses`} icon={ChatBubbleLeftRightIcon} color="indigo" />
+              <StatCard title="Bounces" value={emeliaStats.bounced} subtitle={`${emeliaStats.bounceRate}% du total`} icon={ExclamationCircleIcon} color="red" />
+              <StatCard title="Désabonnements" value={emeliaStats.unsubscribed} subtitle={`${emeliaStats.unsubscribeRate}% du total`} icon={XCircleIcon} color="gray" />
+              <StatCard title="Quota Journalier" value={`${emeliaStats.sent24h}/${emeliaStats.dailyLimit}`} subtitle={`${Math.round((emeliaStats.sent24h / emeliaStats.dailyLimit) * 100)}% utilisé`} icon={ClockIcon} color="cyan" />
+            </div>
+
+            {/* Graphique performance 7 jours */}
+            <Card className="mb-6">
+              <CardHeader floated={false} shadow={false} className="pb-4">
+                <Typography variant="h6" color="blue-gray">
+                  Performance Emelia - 7 derniers jours
+                </Typography>
+              </CardHeader>
+              <CardBody className="pt-0">
+                <ResponsiveContainer width="100%" height={350}>
+                  <LineChart data={emeliaPerformanceData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="date" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Line type="monotone" dataKey="sent" stroke="#3B82F6" name="Envoyés" strokeWidth={2} />
+                    <Line type="monotone" dataKey="delivered" stroke="#10B981" name="Délivrés" strokeWidth={2} />
+                    <Line type="monotone" dataKey="opened" stroke="#8B5CF6" name="Ouverts" strokeWidth={2} />
+                    <Line type="monotone" dataKey="clicked" stroke="#F59E0B" name="Cliqués" strokeWidth={2} />
+                    <Line type="monotone" dataKey="replied" stroke="#06B6D4" name="Répondus" strokeWidth={2} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </CardBody>
+            </Card>
+
+            {/* Indicateurs de santé */}
+            <Card>
+              <CardHeader floated={false} shadow={false} className="pb-4">
+                <Typography variant="h6" color="blue-gray">
+                  Indicateurs de Santé de la Campagne
+                </Typography>
+              </CardHeader>
+              <CardBody className="pt-0">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="bg-green-50 rounded-lg p-4 border-2 border-green-200">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                      <Typography variant="small" className="font-bold text-green-900">Délivrabilité</Typography>
+                    </div>
+                    <Typography variant="h4" className="text-green-600 mb-1">{emeliaStats.deliveryRate}%</Typography>
+                    <Typography variant="small" className="text-green-700">{emeliaStats.deliveryRate > 95 ? "Excellente" : "Bonne"} délivrabilité</Typography>
+                  </div>
+
+                  <div className={`rounded-lg p-4 border-2 ${emeliaStats.openRate > 30 ? 'bg-green-50 border-green-200' : emeliaStats.openRate > 15 ? 'bg-yellow-50 border-yellow-200' : 'bg-red-50 border-red-200'}`}>
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className={`w-3 h-3 rounded-full ${emeliaStats.openRate > 30 ? 'bg-green-500' : emeliaStats.openRate > 15 ? 'bg-yellow-500' : 'bg-red-500'}`}></div>
+                      <Typography variant="small" className="font-bold">Engagement</Typography>
+                    </div>
+                    <Typography variant="h4" className="mb-1">{emeliaStats.openRate}%</Typography>
+                    <Typography variant="small">{emeliaStats.openRate > 30 ? "Excellent" : emeliaStats.openRate > 15 ? "Moyen" : "Faible"} taux d'ouverture</Typography>
+                  </div>
+
+                  <div className="bg-blue-50 rounded-lg p-4 border-2 border-blue-200">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                      <Typography variant="small" className="font-bold text-blue-900">Conversion</Typography>
+                    </div>
+                    <Typography variant="h4" className="text-blue-600 mb-1">{emeliaStats.replyRate}%</Typography>
+                    <Typography variant="small" className="text-blue-700">Taux de réponse</Typography>
+                  </div>
+                </div>
+              </CardBody>
+            </Card>
+          </TabPanel>
+
+          {/* 🆕 ONGLET ACTIVITÉS */}
+          <TabPanel value="activities" className="p-0 pt-4">
+            <Card>
+              <CardHeader floated={false} shadow={false} className="pb-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Typography variant="h6" color="blue-gray">Activités Récentes Emelia</Typography>
+                    <Typography variant="small" className="text-blue-gray-600 mt-1">Timeline des interactions avec vos emails</Typography>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outlined"
+                    color="blue"
+                    onClick={handleSyncEmelia}
+                    disabled={syncingEmelia}
+                    className="flex items-center gap-2"
+                  >
+                    <ArrowPathIcon className={`h-4 w-4 ${syncingEmelia ? 'animate-spin' : ''}`} />
+                    Actualiser
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardBody className="pt-0">
+                <div className="space-y-3 max-h-96 overflow-y-auto">
+                  {emeliaActivities.map((activity) => (
+                    <ActivityItem key={activity.id} activity={activity} />
+                  ))}
+                </div>
+
+                {emeliaActivities.length === 0 && (
+                  <div className="text-center py-12">
+                    <InboxIcon className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                    <Typography variant="h6" color="blue-gray" className="mb-2">Aucune activité récente</Typography>
+                    <Typography variant="small" className="text-blue-gray-600">Les activités apparaîtront ici une fois que vos emails seront envoyés</Typography>
+                  </div>
+                )}
+              </CardBody>
+            </Card>
+          </TabPanel>
+
+
+          
         </TabsBody>
       </Tabs>
 

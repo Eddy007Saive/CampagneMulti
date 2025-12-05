@@ -149,7 +149,7 @@ export const getAllCampagnes = async () => {
  */
 export const updateCampagneStatus = async (id, statut) => {
   try {
-    const response = await apiClient.patch(`/campagne/${id}`, {
+    const response = await apiClient.patch(`/campagne/${id}/status`, {
       statut: statut
     });
     return response.data;
