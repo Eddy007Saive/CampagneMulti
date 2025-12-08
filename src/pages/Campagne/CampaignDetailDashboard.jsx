@@ -1162,8 +1162,7 @@ export function CampaignDetailDashboard() {
       {/* Onglets */}
       <Tabs value={activeTab} onChange={setActiveTab}>
         <TabsHeader className="rounded-lg bg-blue-gray-50/50">
-        
-
+      
           
           <Tab value="overview">
             <div className="flex items-center gap-2">
