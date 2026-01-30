@@ -547,8 +547,6 @@ export function CampaignDetailDashboard() {
           <Button onClick={() => setInfoDialogOpen(false)}>Fermer</Button>
         </DialogFooter>
       </Dialog>
-
-      <ToastContainer />
     </div>
   );
 }

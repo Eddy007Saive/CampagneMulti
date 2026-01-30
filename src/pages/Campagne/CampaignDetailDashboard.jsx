@@ -76,7 +76,6 @@ import {
   Line
 } from "recharts";
 
-// Import des services Airtable
 import { getCampagneById, lancerCampagne, deleteCampagne, updateCampagneStatus, deleteCampagneWithContacts, updateCampagneEnrichissement } from '@/services/Campagne';
 import { getContactsByCampaignId, exportContactsSansReponseCSV } from '@/services/Contact';
 import { useParams, useNavigate } from "react-router-dom";
@@ -1158,17 +1157,6 @@ export function CampaignDetailDashboard() {
               <CursorArrowRippleIcon className="h-4 w-4 text-orange-500" />
               <span className="text-sm font-medium">{emeliaStats.clicked} clics ({emeliaStats.clickRate}%)</span>
             </div>
-            <Button
-              size="sm"
-              variant="outlined"
-              color="blue"
-              onClick={handleSyncEmelia}
-              disabled={syncingEmelia}
-              className="flex items-center gap-2"
-            >
-              <ArrowPathIcon className={`h-4 w-4 ${syncingEmelia ? 'animate-spin' : ''}`} />
-              Sync
-            </Button>
           </div>
         </div>
       </div>
@@ -1419,9 +1407,13 @@ export function CampaignDetailDashboard() {
                 </CardBody>
               </Card>
 
-              <div className="mt-6">
-                <Typography variant="h6" color="blue-gray" className="mb-4">Entonnoir de Conversion Emelia</Typography>
-                <div className="space-y-3">
+              <Card className="mt-6flex flex-col bg-clip-border rounded-xl bg-white text-gray-700 shadow-md relative bg-gradient-to-br from-bleu-fonce/90 to-noir-absolu/80 backdrop-blur-xl border border-bleu-neon/20 hover:border-violet-plasma/30 transition-all duration-500">
+              <CardHeader floated={false} shadow={false} className="pb-4 bg-clip-border rounded-xl overflow-hidden bg-transparent text-gray-700 shadow-none m-0 p-6 ">
+                  <Typography variant="h6" color="blue-gray" className="block antialiased font-sans text-blanc-pur  text-lg font-semibold">
+                    Entonnoir de Conversion Emelia
+                  </Typography>
+                </CardHeader>
+                <CardBody className="space-y-3">
                   {emeliaFunnelData.map((item, index) => (
                     <div key={index}>
                       <div className="flex justify-between mb-1">
@@ -1436,8 +1428,8 @@ export function CampaignDetailDashboard() {
                       </div>
                     </div>
                   ))}
-                </div>
-              </div>
+                </CardBody>
+              </Card>
             </div>
           </TabPanel>
 
@@ -1552,43 +1544,6 @@ export function CampaignDetailDashboard() {
           </TabPanel>
 
           <TabPanel value="emelia" className="p-0 pt-4">
-            {/* Header + stats détaillées */}
-            <div className="mb-6">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <Typography variant="h5" color="blue-gray">
-                    Tableau de bord Emelia
-                  </Typography>
-                  <Typography variant="small" className="text-blue-gray-600">
-                    Suivi en temps réel de vos envois
-                  </Typography>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Typography variant="small" className="text-blue-gray-600">
-                    Dernière sync: {emeliaStats.lastSync}
-                  </Typography>
-                  <Button
-                    size="sm"
-                    variant="gradient"
-                    color="blue"
-                    onClick={handleSyncEmelia}
-                    disabled={syncingEmelia}
-                    className="flex items-center gap-2"
-                  >
-                    <ArrowPathIcon className={`h-4 w-4 ${syncingEmelia ? 'animate-spin' : ''}`} />
-                    {syncingEmelia ? 'Sync...' : 'Synchroniser'}
-                  </Button>
-                </div>
-              </div>
-
-              <Alert color="blue" icon={<SignalIcon className="h-5 w-5" />} className="mb-6">
-                <Typography variant="small" className="font-medium">
-                  Campagne active • Limite quotidienne: {emeliaStats.dailyLimit} emails/jour •
-                  Envoyés aujourd'hui: {emeliaStats.sent24h}
-                </Typography>
-              </Alert>
-            </div>
-
             {/* Grille de stats */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
               <StatCard title="Emails Envoyés" value={emeliaStats.totalSent} subtitle="Total de la campagne" icon={PaperAirplaneIcon} color="blue" />
@@ -2291,7 +2246,6 @@ export function CampaignDetailDashboard() {
         isConnected={isConnected}
         onClose={clearEvents}
       />
-      <ToastContainer />
 
     </div>
   );

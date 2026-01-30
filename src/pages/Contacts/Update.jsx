@@ -328,7 +328,6 @@ export function Update() {
           {/* Vous pourriez ajouter une prévisualisation du produit ici */}
         </div>
       </div>
-      <ToastContainer />
     </section>
   );
 }
