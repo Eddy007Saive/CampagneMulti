@@ -164,7 +164,7 @@ export function LinkedInConfigInterface() {
         }
       }));
     } else if (field === 'liAt') {
-      const isValid = value && value.length > 50 && value.startsWith('AQEDA');
+      const isValid = value && value.length > 50;
       setValidationStatus(prev => ({
         ...prev,
         liAt: {
