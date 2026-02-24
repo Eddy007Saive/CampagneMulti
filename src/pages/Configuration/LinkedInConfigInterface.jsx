@@ -37,8 +37,10 @@ export function LinkedInConfigInterface() {
   const [currentUser, setCurrentUser] = useState(null);
   const [isTestingEmelia, setIsTestingEmelia] = useState(false);
   const [isTestingGhl, setIsTestingGhl] = useState(false);
-  const [isEditingEmelia, setIsEditingEmelia] = useState(false);
-  const [isEditingGhl, setIsEditingGhl] = useState(false);
+
+  // ✅ CORRIGÉ : isConnected = true → affiche "Déjà connecté"
+  const [isEmeliaConnected, setIsEmeliaConnected] = useState(false);
+  const [isGhlConnected, setIsGhlConnected] = useState(false);
 
   // Récupérer l'utilisateur depuis le localStorage
   useEffect(() => {
@@ -52,6 +54,7 @@ export function LinkedInConfigInterface() {
             ...prev,
             userId: user.id
           }));
+          console.log("ok");
 
         } else {
           console.warn('Aucun utilisateur trouvé dans le localStorage');
@@ -81,8 +84,7 @@ export function LinkedInConfigInterface() {
     setIsLoading(true);
     try {
       const status = await getSystemStatus(currentUser);
-      console.log(status);
-
+      console.log("status", status);
 
       if (status) {
         setSystemStatus(status);
@@ -100,9 +102,8 @@ export function LinkedInConfigInterface() {
             ghlLocationId: status.configuration.ghlLocationId || ''
           });
 
-          // Initialiser les états d'édition basés sur l'existence des clés
-          setIsEditingEmelia(!status.configuration.emeliaApiKey);
-          setIsEditingGhl(!status.configuration.ghlApiKey);
+          setIsEmeliaConnected(status.configuration.emeliaKey === true);
+          setIsGhlConnected(status.configuration.ghlapikey === true);
         }
 
         // Charger le quota
@@ -221,7 +222,8 @@ export function LinkedInConfigInterface() {
             message: 'Connexion réussie'
           }
         }));
-        setIsEditingEmelia(false);
+        // ✅ CORRIGÉ : test réussi → passe en mode "Déjà connecté"
+        setIsEmeliaConnected(true);
       } else {
         showNotification('❌ Échec de connexion Emelia: ' + (result.error || 'Erreur inconnue'), 'error');
         setValidationStatus(prev => ({
@@ -256,7 +258,6 @@ export function LinkedInConfigInterface() {
     setIsTestingGhl(true);
     try {
       const response = await testConnectionGHL(config);
-      console.log(response);
 
       if (response.success) {
         showNotification('✅ Connexion GHL réussie !', 'success');
@@ -271,7 +272,8 @@ export function LinkedInConfigInterface() {
             message: 'Location ID validé'
           }
         }));
-        setIsEditingGhl(false);
+        // ✅ CORRIGÉ : test réussi → passe en mode "Déjà connecté"
+        setIsGhlConnected(true);
       } else {
         showNotification('❌ Échec de connexion GHL', 'error');
         setValidationStatus(prev => ({
@@ -342,11 +344,12 @@ export function LinkedInConfigInterface() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen ">
+      <div className="min-h-screen">
         <Loading />
       </div>
     );
   }
+
   if (!currentUser) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-bleu-fonce/90 to-noir-absolu/80 text-white flex items-center justify-center">
@@ -494,8 +497,7 @@ export function LinkedInConfigInterface() {
                   </button>
                 </div>
                 {validationStatus.liAt && (
-                  <div className={`mt-2 flex items-center gap-2 text-sm ${validationStatus.liAt.valid ? 'text-green-400' : 'text-red-400'
-                    }`}>
+                  <div className={`mt-2 flex items-center gap-2 text-sm ${validationStatus.liAt.valid ? 'text-green-400' : 'text-red-400'}`}>
                     {validationStatus.liAt.valid ? (
                       <CheckCircle className="w-4 h-4" />
                     ) : (
@@ -545,8 +547,7 @@ export function LinkedInConfigInterface() {
                   />
                 </div>
                 {validationStatus.userAgent && (
-                  <div className={`mt-2 flex items-center gap-2 text-sm ${validationStatus.userAgent.valid ? 'text-green-400' : 'text-red-400'
-                    }`}>
+                  <div className={`mt-2 flex items-center gap-2 text-sm ${validationStatus.userAgent.valid ? 'text-green-400' : 'text-red-400'}`}>
                     {validationStatus.userAgent.valid ? (
                       <CheckCircle className="w-4 h-4" />
                     ) : (
@@ -592,8 +593,7 @@ export function LinkedInConfigInterface() {
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#00CFFF]/60" />
                 </div>
                 {validationStatus.email && (
-                  <div className={`mt-2 flex items-center gap-2 text-sm ${validationStatus.email.valid ? 'text-green-400' : 'text-red-400'
-                    }`}>
+                  <div className={`mt-2 flex items-center gap-2 text-sm ${validationStatus.email.valid ? 'text-green-400' : 'text-red-400'}`}>
                     {validationStatus.email.valid ? (
                       <CheckCircle className="w-4 h-4" />
                     ) : (
@@ -625,8 +625,9 @@ export function LinkedInConfigInterface() {
                 <label className="block text-sm font-medium text-[#00CFFF]/90 mb-2">
                   Clé API Emelia
                 </label>
-                {isEditingEmelia ? (
-                  // État connecté
+
+                {/* ✅ CORRIGÉ : isEmeliaConnected = true → affiche "Déjà connecté" */}
+                {isEmeliaConnected ? (
                   <div className="flex items-center justify-between p-4 bg-green-500/10 border border-green-400/30 rounded-lg">
                     <div className="flex items-center gap-3">
                       <CheckCircle className="w-5 h-5 text-green-400" />
@@ -636,16 +637,15 @@ export function LinkedInConfigInterface() {
                       </div>
                     </div>
                     <button
-                      onClick={() => setIsEditingEmelia(false)}
+                      onClick={() => setIsEmeliaConnected(false)}
                       className="px-4 py-2 bg-gradient-to-r from-[#00CFFF] to-[#A63DFF] 
-        text-white font-semibold rounded-lg text-sm
-        hover:shadow-[0_0_20px_rgba(0,207,255,0.5)] transition-all duration-300"
+                        text-white font-semibold rounded-lg text-sm
+                        hover:shadow-[0_0_20px_rgba(0,207,255,0.5)] transition-all duration-300"
                     >
                       Modifier
                     </button>
                   </div>
                 ) : (
-                  // État édition (inputs)
                   <>
                     <div className="flex gap-2 flex-col sm:flex-row">
                       <div className="relative flex-1">
@@ -655,9 +655,9 @@ export function LinkedInConfigInterface() {
                           onChange={(e) => handleInputChange('emeliaApiKey', e.target.value)}
                           placeholder="Entrez votre clé API Emelia..."
                           className="w-full p-3 bg-[#0B1030]/50 border border-[#00CFFF]/40 rounded-lg 
-            focus:ring-2 focus:ring-[#A63DFF] focus:border-[#A63DFF] 
-            text-white placeholder-[#00CFFF]/50 pr-10
-            transition-all duration-300 hover:border-[#00CFFF]/60"
+                            focus:ring-2 focus:ring-[#A63DFF] focus:border-[#A63DFF] 
+                            text-white placeholder-[#00CFFF]/50 pr-10
+                            transition-all duration-300 hover:border-[#00CFFF]/60"
                         />
                         <button
                           type="button"
@@ -671,11 +671,11 @@ export function LinkedInConfigInterface() {
                         onClick={handleTestEmeliaConnection}
                         disabled={isTestingEmelia || !config.emeliaApiKey}
                         className="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 
-          text-white font-semibold rounded-lg
-          hover:shadow-[0_0_20px_rgba(34,197,94,0.5)] transition-all duration-300 
-          disabled:opacity-50 disabled:cursor-not-allowed 
-          flex items-center justify-center gap-2 whitespace-nowrap
-          sm:w-auto w-full"
+                          text-white font-semibold rounded-lg
+                          hover:shadow-[0_0_20px_rgba(34,197,94,0.5)] transition-all duration-300 
+                          disabled:opacity-50 disabled:cursor-not-allowed 
+                          flex items-center justify-center gap-2 whitespace-nowrap
+                          sm:w-auto w-full"
                       >
                         {isTestingEmelia ? (
                           <>
@@ -693,9 +693,10 @@ export function LinkedInConfigInterface() {
                         {validationStatus.emeliaApiKey.message}
                       </div>
                     )}
-                    {isEditingEmelia && config.emeliaApiKey && (
+                    {/* ✅ CORRIGÉ : bouton Annuler remet isEmeliaConnected à true */}
+                    {config.emeliaApiKey && (
                       <button
-                        onClick={() => setIsEditingEmelia(false)}
+                        onClick={() => setIsEmeliaConnected(true)}
                         className="mt-2 text-sm text-[#00CFFF]/70 hover:text-[#00CFFF] transition-colors"
                       >
                         Annuler
@@ -723,10 +724,9 @@ export function LinkedInConfigInterface() {
             </div>
 
             <div className="p-6 space-y-6">
-              {/* Clé API GHL */}
               <div>
-                {isEditingGhl ? (
-                  // État connecté
+                {/* ✅ CORRIGÉ : isGhlConnected = true → affiche "Déjà connecté" */}
+                {isGhlConnected ? (
                   <div className="flex items-center justify-between p-4 bg-green-500/10 border border-green-400/30 rounded-lg">
                     <div className="flex items-center gap-3">
                       <CheckCircle className="w-5 h-5 text-green-400" />
@@ -736,16 +736,15 @@ export function LinkedInConfigInterface() {
                       </div>
                     </div>
                     <button
-                      onClick={() => setIsEditingGhl(false)}
+                      onClick={() => setIsGhlConnected(false)}
                       className="px-4 py-2 bg-gradient-to-r from-[#00CFFF] to-[#A63DFF] 
-              text-white font-semibold rounded-lg text-sm
-              hover:shadow-[0_0_20px_rgba(0,207,255,0.5)] transition-all duration-300"
+                        text-white font-semibold rounded-lg text-sm
+                        hover:shadow-[0_0_20px_rgba(0,207,255,0.5)] transition-all duration-300"
                     >
                       Modifier
                     </button>
                   </div>
                 ) : (
-                  // État édition (inputs)
                   <div className="space-y-6">
                     {/* Clé API GHL */}
                     <div>
@@ -759,9 +758,9 @@ export function LinkedInConfigInterface() {
                           onChange={(e) => handleInputChange('ghlApiKey', e.target.value)}
                           placeholder="Entrez votre clé API GHL..."
                           className="w-full p-3 bg-[#0B1030]/50 border border-[#00CFFF]/40 rounded-lg 
-                  focus:ring-2 focus:ring-[#A63DFF] focus:border-[#A63DFF] 
-                  text-white placeholder-[#00CFFF]/50 pr-10
-                  transition-all duration-300 hover:border-[#00CFFF]/60"
+                            focus:ring-2 focus:ring-[#A63DFF] focus:border-[#A63DFF] 
+                            text-white placeholder-[#00CFFF]/50 pr-10
+                            transition-all duration-300 hover:border-[#00CFFF]/60"
                         />
                         <button
                           type="button"
@@ -791,19 +790,19 @@ export function LinkedInConfigInterface() {
                           onChange={(e) => handleInputChange('ghlLocationId', e.target.value)}
                           placeholder="Entrez votre Location ID..."
                           className="flex-1 p-3 bg-[#0B1030]/50 border border-[#00CFFF]/40 rounded-lg 
-                  focus:ring-2 focus:ring-[#A63DFF] focus:border-[#A63DFF] 
-                  text-white placeholder-[#00CFFF]/50
-                  transition-all duration-300 hover:border-[#00CFFF]/60"
+                            focus:ring-2 focus:ring-[#A63DFF] focus:border-[#A63DFF] 
+                            text-white placeholder-[#00CFFF]/50
+                            transition-all duration-300 hover:border-[#00CFFF]/60"
                         />
                         <button
                           onClick={handleTestGhlConnection}
                           disabled={isTestingGhl || !config.ghlApiKey || !config.ghlLocationId}
                           className="px-6 py-3 bg-gradient-to-r from-[#A63DFF] to-[#00CFFF] 
-                  text-white font-semibold rounded-lg
-                  hover:shadow-[0_0_25px_rgba(166,61,255,0.5)] transition-all duration-300 
-                  disabled:opacity-50 disabled:cursor-not-allowed 
-                  flex items-center justify-center gap-2 whitespace-nowrap
-                  sm:w-auto w-full"
+                            text-white font-semibold rounded-lg
+                            hover:shadow-[0_0_25px_rgba(166,61,255,0.5)] transition-all duration-300 
+                            disabled:opacity-50 disabled:cursor-not-allowed 
+                            flex items-center justify-center gap-2 whitespace-nowrap
+                            sm:w-auto w-full"
                         >
                           {isTestingGhl ? (
                             <>
@@ -823,9 +822,10 @@ export function LinkedInConfigInterface() {
                       )}
                     </div>
 
-                    {isEditingGhl && config.ghlApiKey && (
+                    {/* ✅ CORRIGÉ : bouton Annuler remet isGhlConnected à true */}
+                    {config.ghlApiKey && (
                       <button
-                        onClick={() => setIsEditingGhl(false)}
+                        onClick={() => setIsGhlConnected(true)}
                         className="text-sm text-[#00CFFF]/70 hover:text-[#00CFFF] transition-colors"
                       >
                         Annuler
@@ -928,12 +928,10 @@ export function LinkedInConfigInterface() {
               ) : (
                 <Save className="w-5 h-5" />
               )}
-
               <span>
                 {isSaving ? "Sauvegarde en cours..." : "Sauvegarder la Configuration"}
               </span>
             </span>
-
             <div className="absolute inset-0 bg-gradient-to-r 
               from-transparent via-white/20 to-transparent
               -translate-x-full group-hover:translate-x-full
