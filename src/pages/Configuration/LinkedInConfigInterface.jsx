@@ -105,7 +105,7 @@ export function LinkedInConfigInterface() {
           setIsEmeliaConnected(status.configuration.emeliaKey === true);
           setIsGhlConnected(status.configuration.ghlapikey === true);
         }
-
+é
         // Charger le quota
         if (status.quota) {
           setQuota(status.quota);
