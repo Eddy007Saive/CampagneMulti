@@ -404,7 +404,6 @@ export function CampaignDetailDashboard() {
         const campaignResponse = await getCampagneById(campaignId);
         const campaign = campaignResponse.data;
         setCampaignData(campaign);
-        console.log("Données de la campagne récupérées:", campaign);
 
         const contactsResponse = await getContactsByCampaignId(campaignId);
         const contacts = contactsResponse.data || [];
@@ -412,9 +411,10 @@ export function CampaignDetailDashboard() {
         setStats(calculateStats(contacts));
 
         // 3. On appelle Emelia UNIQUEMENT si Campagnes_cold_email est non vide
-        const hasColdEmail = campaign?.Campagnes_cold_email &&
-          campaign.Campagnes_cold_email !== "" &&
-          campaign.Campagnes_cold_email !== null;
+        const hasColdEmail = campaign?.coldCampaignIdEmelia &&
+          campaign.coldCampaignIdEmelia !== "" &&
+          campaign.coldCampaignIdEmelia !== null;
+
 
         if (hasColdEmail) {
           const [emeliaStatisticResponse, emeliaActivitiesResponse] = await Promise.all([
@@ -893,9 +893,9 @@ export function CampaignDetailDashboard() {
     );
   };
 
-  const hasColdEmail = !!(campaignData?.Campagnes_cold_email && 
-                          campaignData.Campagnes_cold_email !== "" && 
-                          campaignData.Campagnes_cold_email !== null);
+  const hasColdEmail = !!(campaignData?.coldCampaignIdEmelia &&
+    campaignData.coldCampaignIdEmelia !== "" &&
+    campaignData.coldCampaignIdEmelia !== null);
 
   if (loading) {
     return (
@@ -1137,35 +1137,35 @@ export function CampaignDetailDashboard() {
       </div>
 
       {hasColdEmail && (
-      <div className="bg-gradient-to-r from-blue-50 via-purple-50 to-pink-50 rounded-xl p-4 mb-4 border border-blue-200">
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          <div className="flex items-center gap-2">
-            <SignalIcon className="h-5 w-5 text-blue-600" />
-            <Typography variant="small" className="font-bold text-blue-gray-700">
-              Statistiques Emelia en temps réel
-            </Typography>
-          </div>
-          <div className="flex items-center gap-6 flex-wrap">
+        <div className="bg-gradient-to-r from-blue-50 via-purple-50 to-pink-50 rounded-xl p-4 mb-4 border border-blue-200">
+          <div className="flex items-center justify-between flex-wrap gap-4">
             <div className="flex items-center gap-2">
-              <PaperAirplaneIcon className="h-4 w-4 text-blue-500" />
-              <span className="text-sm font-medium">{emeliaStats.totalSent} envoyés</span>
+              <SignalIcon className="h-5 w-5 text-blue-600" />
+              <Typography variant="small" className="font-bold text-blue-gray-700">
+                Statistiques Emelia en temps réel
+              </Typography>
             </div>
-            <div className="flex items-center gap-2">
-              <CheckCircleIcon className="h-4 w-4 text-green-500" />
-              <span className="text-sm font-medium">{emeliaStats.delivered} délivrés ({emeliaStats.deliveryRate}%)</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <EyeIcon className="h-4 w-4 text-purple-500" />
-              <span className="text-sm font-medium">{emeliaStats.opened} ouverts ({emeliaStats.openRate}%)</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <CursorArrowRippleIcon className="h-4 w-4 text-orange-500" />
-              <span className="text-sm font-medium">{emeliaStats.clicked} clics ({emeliaStats.clickRate}%)</span>
+            <div className="flex items-center gap-6 flex-wrap">
+              <div className="flex items-center gap-2">
+                <PaperAirplaneIcon className="h-4 w-4 text-blue-500" />
+                <span className="text-sm font-medium">{emeliaStats.totalSent} envoyés</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircleIcon className="h-4 w-4 text-green-500" />
+                <span className="text-sm font-medium">{emeliaStats.delivered} délivrés ({emeliaStats.deliveryRate}%)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <EyeIcon className="h-4 w-4 text-purple-500" />
+                <span className="text-sm font-medium">{emeliaStats.opened} ouverts ({emeliaStats.openRate}%)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CursorArrowRippleIcon className="h-4 w-4 text-orange-500" />
+                <span className="text-sm font-medium">{emeliaStats.clicked} clics ({emeliaStats.clickRate}%)</span>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-       )}
+      )}
 
 
       {/* Onglets */}
@@ -1195,6 +1195,7 @@ export function CampaignDetailDashboard() {
               Activités
             </div>
           </Tab>
+
 
           <Tab value="performance">
             <div className="flex items-center gap-2">

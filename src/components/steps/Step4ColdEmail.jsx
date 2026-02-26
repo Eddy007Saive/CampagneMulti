@@ -19,6 +19,223 @@ import { testConnection } from "@/services/Emelia";
 import * as emeliaService from "@/services/Emelia";
 import toastify from "@/utils/toastify";
 
+// ─── Composant éditeur d'email réutilisable ───
+const EmailEditor = ({ 
+    color = "green", 
+    readOnly = false,
+    emailStepSelected,
+    formData,
+    deplacerEmailStep,
+    modifierEmailDelay,
+    modifierEmailStep,
+    emailTemplates,
+    setEmailStepSelected
+}) => {
+    if (!emailStepSelected) return null;
+    const currentStep = formData.emailSequence.find(s => s.id === emailStepSelected);
+    const stepIndex = formData.emailSequence.findIndex(s => s.id === emailStepSelected);
+    if (!currentStep) return null;
+    const borderColor = color === "blue" ? "focus:border-blue-500" : "focus:border-green-500";
+    const iconColor = color === "blue" ? "text-blue-400" : "text-green-400";
+
+    return (
+        <div className={`p-6 bg-gray-900 rounded-lg border border-gray-700 ${readOnly ? 'pointer-events-none opacity-80' : ''}`}>
+            {readOnly && (
+                <div className="mb-3 p-2 bg-yellow-900/20 border border-yellow-600/40 rounded text-yellow-400 text-xs flex items-center gap-2">
+                    <span>👁️</span> Aperçu uniquement — non modifiable
+                </div>
+            )}
+            <div className="flex items-center justify-between mb-4">
+                <h5 className="text-white font-semibold flex items-center gap-2">
+                    <MessageSquare size={16} className={stepIndex === 0 ? iconColor : 'text-purple-400'} />
+                    {stepIndex === 0 ? 'Email initial' : `Follow-up ${stepIndex}`}
+                </h5>
+                <div className="flex items-center gap-2">
+                    {stepIndex > 0 && (
+                        <button type="button" onClick={() => deplacerEmailStep(stepIndex, 'up')}
+                            className={`p-1.5 text-gray-400 hover:${iconColor} transition-colors`}>
+                            <MoveUp size={16} />
+                        </button>
+                    )}
+                    {stepIndex < formData.emailSequence.length - 1 && (
+                        <button type="button" onClick={() => deplacerEmailStep(stepIndex, 'down')}
+                            className={`p-1.5 text-gray-400 hover:${iconColor} transition-colors`}>
+                            <MoveDown size={16} />
+                        </button>
+                    )}
+                </div>
+            </div>
+
+            {stepIndex > 0 && (
+                <div className="mb-4">
+                    <label className="text-xs text-gray-400 mb-2 block">Délai d'attente</label>
+                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-purple-900/30 border border-purple-600 rounded-lg">
+                        <Clock size={16} className="text-purple-400" />
+                        <span className="text-purple-300">Attendre</span>
+                        <input type="number" min="1" value={currentStep.delay.amount}
+                            onChange={(e) => modifierEmailDelay(currentStep.id, 'amount', parseInt(e.target.value))}
+                            className="w-16 bg-gray-900 border border-purple-500 rounded text-purple-300 text-center focus:outline-none px-2 py-1"
+                        />
+                        <select value={currentStep.delay.unit}
+                            onChange={(e) => modifierEmailDelay(currentStep.id, 'unit', e.target.value)}
+                            className="bg-gray-900 border border-purple-500 rounded text-purple-300 focus:outline-none px-2 py-1"
+                        >
+                            <option value="MINUTES">minute(s)</option>
+                            <option value="HOURS">heure(s)</option>
+                            <option value="DAYS">jour(s)</option>
+                        </select>
+                    </div>
+                </div>
+            )}
+
+            <div className="mb-4">
+                <label className="text-xs text-gray-400 mb-2 block">Templates suggérés :</label>
+                <div className="flex flex-wrap gap-2">
+                    {emailTemplates.map((template, tIndex) => (
+                        <button key={tIndex} type="button"
+                            onClick={() => { modifierEmailStep(currentStep.id, 'subject', template.subject); modifierEmailStep(currentStep.id, 'message', template.message); }}
+                            className="px-3 py-1.5 text-xs bg-gray-700 hover:bg-gray-600 rounded transition-colors text-gray-300"
+                        >
+                            {template.name}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            <div className="mb-4">
+                <label className="text-xs text-gray-400 mb-2 block">Sujet de l'email *</label>
+                <input type="text" value={currentStep.subject}
+                    onChange={(e) => modifierEmailStep(currentStep.id, 'subject', e.target.value)}
+                    placeholder="Ex: Re: Notre discussion sur..."
+                    className={`w-full bg-gray-800 border border-gray-600 rounded px-4 py-3 text-white ${borderColor} focus:outline-none placeholder-gray-500`}
+                />
+            </div>
+
+            <div className="mb-4">
+                <label className="text-xs text-gray-400 mb-2 block">Message *</label>
+                <textarea value={currentStep.message}
+                    onChange={(e) => modifierEmailStep(currentStep.id, 'message', e.target.value)}
+                    rows={8}
+                    placeholder="Bonjour {Prénom},&#10;&#10;Je me permets de revenir vers vous..."
+                    className={`w-full bg-gray-800 border border-gray-600 rounded px-4 py-3 text-white ${borderColor} focus:outline-none resize-none placeholder-gray-500 font-mono text-sm`}
+                />
+                <div className="flex items-center justify-between mt-2">
+                    <div className="text-xs text-gray-500">{currentStep.message?.length || 0} caractères</div>
+                    <div className="flex items-center gap-4">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" checked={currentStep.rawHtml}
+                                onChange={(e) => modifierEmailStep(currentStep.id, 'rawHtml', e.target.checked)}
+                                className="w-4 h-4 rounded border-gray-600 text-blue-600 bg-gray-700" />
+                            <span className="text-xs text-gray-400">HTML brut</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" checked={currentStep.disabled}
+                                onChange={(e) => modifierEmailStep(currentStep.id, 'disabled', e.target.checked)}
+                                className="w-4 h-4 rounded border-gray-600 text-red-600 bg-gray-700" />
+                            <span className="text-xs text-gray-400">Désactiver</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div className="p-3 bg-blue-900/20 border border-blue-600 rounded-lg">
+                <p className="text-blue-300 text-xs mb-2">💡 Variables disponibles :</p>
+                <div className="flex flex-wrap gap-2">
+                    {['{{firstName}}', '{{lastName}}', '{{email}}'].map(variable => (
+                        <code key={variable}
+                            onClick={() => { navigator.clipboard.writeText(variable); toastify.success(`${variable} copié !`); }}
+                            className="px-2 py-1 bg-blue-800/50 rounded text-blue-200 text-xs cursor-pointer hover:bg-blue-800 transition"
+                        >
+                            {variable}
+                        </code>
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+
+// ─── Composant timeline réutilisable ───
+const EmailTimeline = ({ 
+    color = "green",
+    formData,
+    emailStepSelected,
+    setEmailStepSelected,
+    supprimerEmailStep,
+    ajouterEmailStep
+}) => {
+    const borderSelected = color === "blue" ? "border-blue-500" : "border-green-500";
+    const borderHover = color === "blue" ? "hover:border-blue-400" : "hover:border-green-400";
+    const bgIcon0 = color === "blue" ? "bg-blue-600" : "bg-green-600";
+    const textConfigured = color === "blue" ? "text-blue-400" : "text-green-400";
+    const lineFrom = color === "blue" ? "bg-blue-500" : "bg-green-500";
+    const gradientFrom = color === "blue" ? "from-blue-500" : "from-green-500";
+    const addHover = color === "blue"
+        ? "hover:border-blue-500 hover:bg-blue-900/10 hover:text-blue-400"
+        : "hover:border-green-500 hover:bg-green-900/10 hover:text-green-400";
+
+    return (
+        <div className="flex gap-4 overflow-x-auto pb-6 px-2">
+            {formData.emailSequence.map((step, index) => (
+                <React.Fragment key={step.id}>
+                    <div className="flex-shrink-0 w-48">
+                        <button type="button" onClick={() => setEmailStepSelected(step.id)}
+                            className={`w-full relative rounded-lg p-4 transition-all duration-200 shadow-lg cursor-pointer bg-gray-800 border-2 ${emailStepSelected === step.id ? borderSelected : `border-gray-700 ${borderHover}`}`}
+                        >
+                            <div className="flex flex-col items-center gap-2">
+                                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${index === 0 ? bgIcon0 : 'bg-purple-600'}`}>
+                                    <MessageSquare size={20} className="text-white" />
+                                </div>
+                                <span className="text-white font-semibold text-sm">
+                                    {index === 0 ? 'Email initial' : `Follow-up ${index}`}
+                                </span>
+                                <span className="text-gray-400 text-xs">
+                                    {index === 0 ? 'Immédiat'
+                                        : `Attendre ${step.delay.amount} ${step.delay.unit === 'DAYS' ? 'jour(s)' : step.delay.unit === 'HOURS' ? 'heure(s)' : 'minute(s)'}`}
+                                </span>
+                            </div>
+                            {(step.subject || step.message) && (
+                                <div className="mt-2 text-center">
+                                    <span className={`text-xs ${textConfigured}`}>✓ Configuré</span>
+                                </div>
+                            )}
+                            {index > 0 && (
+                                <button type="button"
+                                    onClick={(e) => { e.stopPropagation(); supprimerEmailStep(step.id); }}
+                                    className="absolute top-2 right-2 p-1 text-red-400 hover:text-red-600 hover:bg-red-900/20 rounded transition-colors"
+                                >
+                                    <Trash2 size={14} />
+                                </button>
+                            )}
+                        </button>
+                    </div>
+                    {index < formData.emailSequence.length - 1 && (
+                        <div className="flex-shrink-0 flex items-center justify-center">
+                            <div className="flex items-center">
+                                <div className={`w-2 h-2 ${lineFrom} rounded-full`}></div>
+                                <div className={`w-8 h-0.5 bg-gradient-to-r ${gradientFrom} to-purple-500`}></div>
+                                <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                            </div>
+                        </div>
+                    )}
+                </React.Fragment>
+            ))}
+            <div className="flex-shrink-0 w-48">
+                <button type="button" onClick={ajouterEmailStep}
+                    className={`w-full h-full min-h-[140px] border-2 border-dashed border-gray-600 rounded-lg transition-all flex flex-col items-center justify-center gap-2 text-gray-400 ${addHover}`}
+                >
+                    <div className="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center">
+                        <Plus size={20} />
+                    </div>
+                    <span className="font-medium text-sm">Ajouter un follow-up</span>
+                </button>
+            </div>
+        </div>
+    );
+};
+
+
 export const Step4ColdEmail = ({
     formData,
     setFormData,
@@ -295,204 +512,6 @@ export const Step4ColdEmail = ({
         { id: 'Jeudi', label: 'Jeudi' }, { id: 'Vendredi', label: 'Vendredi' }, { id: 'Samedi', label: 'Samedi' },
         { id: 'Dimanche', label: 'Dimanche' }
     ];
-
-    // ─── Composant éditeur d'email réutilisable ───
-    const EmailEditor = ({ color = "green", readOnly = false }) => {
-        if (!emailStepSelected) return null;
-        const currentStep = formData.emailSequence.find(s => s.id === emailStepSelected);
-        const stepIndex = formData.emailSequence.findIndex(s => s.id === emailStepSelected);
-        if (!currentStep) return null;
-        const borderColor = color === "blue" ? "focus:border-blue-500" : "focus:border-green-500";
-        const iconColor = color === "blue" ? "text-blue-400" : "text-green-400";
-
-        return (
-            <div className={`p-6 bg-gray-900 rounded-lg border border-gray-700 ${readOnly ? 'pointer-events-none opacity-80' : ''}`}>
-                {readOnly && (
-                    <div className="mb-3 p-2 bg-yellow-900/20 border border-yellow-600/40 rounded text-yellow-400 text-xs flex items-center gap-2">
-                        <span>👁️</span> Aperçu uniquement — non modifiable
-                    </div>
-                )}
-                <div className="flex items-center justify-between mb-4">
-                    <h5 className="text-white font-semibold flex items-center gap-2">
-                        <MessageSquare size={16} className={stepIndex === 0 ? iconColor : 'text-purple-400'} />
-                        {stepIndex === 0 ? 'Email initial' : `Follow-up ${stepIndex}`}
-                    </h5>
-                    <div className="flex items-center gap-2">
-                        {stepIndex > 0 && (
-                            <button type="button" onClick={() => deplacerEmailStep(stepIndex, 'up')}
-                                className={`p-1.5 text-gray-400 hover:${iconColor} transition-colors`}>
-                                <MoveUp size={16} />
-                            </button>
-                        )}
-                        {stepIndex < formData.emailSequence.length - 1 && (
-                            <button type="button" onClick={() => deplacerEmailStep(stepIndex, 'down')}
-                                className={`p-1.5 text-gray-400 hover:${iconColor} transition-colors`}>
-                                <MoveDown size={16} />
-                            </button>
-                        )}
-                    </div>
-                </div>
-
-                {stepIndex > 0 && (
-                    <div className="mb-4">
-                        <label className="text-xs text-gray-400 mb-2 block">Délai d'attente</label>
-                        <div className="inline-flex items-center gap-2 px-4 py-2 bg-purple-900/30 border border-purple-600 rounded-lg">
-                            <Clock size={16} className="text-purple-400" />
-                            <span className="text-purple-300">Attendre</span>
-                            <input type="number" min="1" value={currentStep.delay.amount}
-                                onChange={(e) => modifierEmailDelay(currentStep.id, 'amount', parseInt(e.target.value))}
-                                className="w-16 bg-gray-900 border border-purple-500 rounded text-purple-300 text-center focus:outline-none px-2 py-1"
-                            />
-                            <select value={currentStep.delay.unit}
-                                onChange={(e) => modifierEmailDelay(currentStep.id, 'unit', e.target.value)}
-                                className="bg-gray-900 border border-purple-500 rounded text-purple-300 focus:outline-none px-2 py-1"
-                            >
-                                <option value="MINUTES">minute(s)</option>
-                                <option value="HOURS">heure(s)</option>
-                                <option value="DAYS">jour(s)</option>
-                            </select>
-                        </div>
-                    </div>
-                )}
-
-                <div className="mb-4">
-                    <label className="text-xs text-gray-400 mb-2 block">Templates suggérés :</label>
-                    <div className="flex flex-wrap gap-2">
-                        {emailTemplates.map((template, tIndex) => (
-                            <button key={tIndex} type="button"
-                                onClick={() => { modifierEmailStep(currentStep.id, 'subject', template.subject); modifierEmailStep(currentStep.id, 'message', template.message); }}
-                                className="px-3 py-1.5 text-xs bg-gray-700 hover:bg-gray-600 rounded transition-colors text-gray-300"
-                            >
-                                {template.name}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-
-                <div className="mb-4">
-                    <label className="text-xs text-gray-400 mb-2 block">Sujet de l'email *</label>
-                    <input type="text" value={currentStep.subject}
-                        onChange={(e) => modifierEmailStep(currentStep.id, 'subject', e.target.value)}
-                        placeholder="Ex: Re: Notre discussion sur..."
-                        className={`w-full bg-gray-800 border border-gray-600 rounded px-4 py-3 text-white ${borderColor} focus:outline-none placeholder-gray-500`}
-                    />
-                </div>
-
-                <div className="mb-4">
-                    <label className="text-xs text-gray-400 mb-2 block">Message *</label>
-                    <textarea value={currentStep.message}
-                        onChange={(e) => modifierEmailStep(currentStep.id, 'message', e.target.value)}
-                        rows={8}
-                        placeholder="Bonjour {Prénom},&#10;&#10;Je me permets de revenir vers vous..."
-                        className={`w-full bg-gray-800 border border-gray-600 rounded px-4 py-3 text-white ${borderColor} focus:outline-none resize-none placeholder-gray-500 font-mono text-sm`}
-                    />
-                    <div className="flex items-center justify-between mt-2">
-                        <div className="text-xs text-gray-500">{currentStep.message?.length || 0} caractères</div>
-                        <div className="flex items-center gap-4">
-                            <label className="flex items-center gap-2 cursor-pointer">
-                                <input type="checkbox" checked={currentStep.rawHtml}
-                                    onChange={(e) => modifierEmailStep(currentStep.id, 'rawHtml', e.target.checked)}
-                                    className="w-4 h-4 rounded border-gray-600 text-blue-600 bg-gray-700" />
-                                <span className="text-xs text-gray-400">HTML brut</span>
-                            </label>
-                            <label className="flex items-center gap-2 cursor-pointer">
-                                <input type="checkbox" checked={currentStep.disabled}
-                                    onChange={(e) => modifierEmailStep(currentStep.id, 'disabled', e.target.checked)}
-                                    className="w-4 h-4 rounded border-gray-600 text-red-600 bg-gray-700" />
-                                <span className="text-xs text-gray-400">Désactiver</span>
-                            </label>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="p-3 bg-blue-900/20 border border-blue-600 rounded-lg">
-                    <p className="text-blue-300 text-xs mb-2">💡 Variables disponibles :</p>
-                    <div className="flex flex-wrap gap-2">
-                        {['{{firstName}}', '{{lastName}}', '{{email}}'].map(variable => (
-                            <code key={variable}
-                                onClick={() => { navigator.clipboard.writeText(variable); toastify.success(`${variable} copié !`); }}
-                                className="px-2 py-1 bg-blue-800/50 rounded text-blue-200 text-xs cursor-pointer hover:bg-blue-800 transition"
-                            >
-                                {variable}
-                            </code>
-                        ))}
-                    </div>
-                </div>
-            </div>
-        );
-    };
-
-    // ─── Composant timeline réutilisable ───
-    const EmailTimeline = ({ color = "green" }) => {
-        const borderSelected = color === "blue" ? "border-blue-500" : "border-green-500";
-        const borderHover = color === "blue" ? "hover:border-blue-400" : "hover:border-green-400";
-        const bgIcon0 = color === "blue" ? "bg-blue-600" : "bg-green-600";
-        const textConfigured = color === "blue" ? "text-blue-400" : "text-green-400";
-        const lineFrom = color === "blue" ? "bg-blue-500" : "bg-green-500";
-        const gradientFrom = color === "blue" ? "from-blue-500" : "from-green-500";
-        const addHover = color === "blue"
-            ? "hover:border-blue-500 hover:bg-blue-900/10 hover:text-blue-400"
-            : "hover:border-green-500 hover:bg-green-900/10 hover:text-green-400";
-
-        return (
-            <div className="flex gap-4 overflow-x-auto pb-6 px-2">
-                {formData.emailSequence.map((step, index) => (
-                    <React.Fragment key={step.id}>
-                        <div className="flex-shrink-0 w-48">
-                            <button type="button" onClick={() => setEmailStepSelected(step.id)}
-                                className={`w-full relative rounded-lg p-4 transition-all duration-200 shadow-lg cursor-pointer bg-gray-800 border-2 ${emailStepSelected === step.id ? borderSelected : `border-gray-700 ${borderHover}`}`}
-                            >
-                                <div className="flex flex-col items-center gap-2">
-                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${index === 0 ? bgIcon0 : 'bg-purple-600'}`}>
-                                        <MessageSquare size={20} className="text-white" />
-                                    </div>
-                                    <span className="text-white font-semibold text-sm">
-                                        {index === 0 ? 'Email initial' : `Follow-up ${index}`}
-                                    </span>
-                                    <span className="text-gray-400 text-xs">
-                                        {index === 0 ? 'Immédiat'
-                                            : `Attendre ${step.delay.amount} ${step.delay.unit === 'DAYS' ? 'jour(s)' : step.delay.unit === 'HOURS' ? 'heure(s)' : 'minute(s)'}`}
-                                    </span>
-                                </div>
-                                {(step.subject || step.message) && (
-                                    <div className="mt-2 text-center">
-                                        <span className={`text-xs ${textConfigured}`}>✓ Configuré</span>
-                                    </div>
-                                )}
-                                {index > 0 && (
-                                    <button type="button"
-                                        onClick={(e) => { e.stopPropagation(); supprimerEmailStep(step.id); }}
-                                        className="absolute top-2 right-2 p-1 text-red-400 hover:text-red-600 hover:bg-red-900/20 rounded transition-colors"
-                                    >
-                                        <Trash2 size={14} />
-                                    </button>
-                                )}
-                            </button>
-                        </div>
-                        {index < formData.emailSequence.length - 1 && (
-                            <div className="flex-shrink-0 flex items-center justify-center">
-                                <div className="flex items-center">
-                                    <div className={`w-2 h-2 ${lineFrom} rounded-full`}></div>
-                                    <div className={`w-8 h-0.5 bg-gradient-to-r ${gradientFrom} to-purple-500`}></div>
-                                    <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                                </div>
-                            </div>
-                        )}
-                    </React.Fragment>
-                ))}
-                <div className="flex-shrink-0 w-48">
-                    <button type="button" onClick={ajouterEmailStep}
-                        className={`w-full h-full min-h-[140px] border-2 border-dashed border-gray-600 rounded-lg transition-all flex flex-col items-center justify-center gap-2 text-gray-400 ${addHover}`}
-                    >
-                        <div className="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center">
-                            <Plus size={20} />
-                        </div>
-                        <span className="font-medium text-sm">Ajouter un follow-up</span>
-                    </button>
-                </div>
-            </div>
-        );
-    };
 
     // ─── LOADING ───
     if (isCheckingEmelia) {
@@ -861,9 +880,25 @@ export const Step4ColdEmail = ({
                                         </span>
                                     </div>
                                     <div className="relative mb-6">
-                                        <EmailTimeline color="blue" />
+                                        <EmailTimeline 
+                                        color="blue"
+                                        formData={formData}
+                                        emailStepSelected={emailStepSelected}
+                                        setEmailStepSelected={setEmailStepSelected}
+                                        supprimerEmailStep={supprimerEmailStep}
+                                        ajouterEmailStep={ajouterEmailStep}
+                                    />
                                     </div>
-                                    <EmailEditor color="blue" />
+                                    <EmailEditor 
+                                        color="blue"
+                                        emailStepSelected={emailStepSelected}
+                                        formData={formData}
+                                        deplacerEmailStep={deplacerEmailStep}
+                                        modifierEmailDelay={modifierEmailDelay}
+                                        modifierEmailStep={modifierEmailStep}
+                                        emailTemplates={emailTemplates}
+                                        setEmailStepSelected={setEmailStepSelected}
+                                    />
                                     <div className="mt-4 p-3 bg-blue-900/20 border border-blue-600 rounded-lg">
                                         <p className="text-blue-300 text-sm">
                                             ✏️ Vous pouvez modifier cette séquence. Les changements seront synchronisés avec Emelia lors de la sauvegarde.
@@ -1031,9 +1066,26 @@ export const Step4ColdEmail = ({
                                         </span>
                                     </div>
                                     <div className="relative mb-6">
-                                        <EmailTimeline color="green" />
+                                        <EmailTimeline 
+                                        color="green"
+                                        formData={formData}
+                                        emailStepSelected={emailStepSelected}
+                                        setEmailStepSelected={setEmailStepSelected}
+                                        supprimerEmailStep={supprimerEmailStep}
+                                        ajouterEmailStep={ajouterEmailStep}
+                                    />
                                     </div>
-                                    <EmailEditor color="green" readOnly={true} />
+                                    <EmailEditor 
+                                        color="green"
+                                        readOnly={true}
+                                        emailStepSelected={emailStepSelected}
+                                        formData={formData}
+                                        deplacerEmailStep={deplacerEmailStep}
+                                        modifierEmailDelay={modifierEmailDelay}
+                                        modifierEmailStep={modifierEmailStep}
+                                        emailTemplates={emailTemplates}
+                                        setEmailStepSelected={setEmailStepSelected}
+                                    />
                                 </div>
                             )}
                         </>
