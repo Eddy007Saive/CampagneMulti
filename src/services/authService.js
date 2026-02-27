@@ -48,8 +48,8 @@ class AuthService {
       if (response.success) {
         const { user, accessToken, refreshToken } = response.data;
         console.log(response.data);
-        
-        
+
+
         // Stocker les tokens et les infos utilisateur
         this.setToken(accessToken);
         this.setRefreshToken(refreshToken);
@@ -75,7 +75,7 @@ class AuthService {
 
       if (response.success) {
         const { user, accessToken, refreshToken } = response.data;
-        
+
         // Stocker les tokens et les infos utilisateur
         this.setToken(accessToken);
         this.setRefreshToken(refreshToken);
@@ -109,7 +109,7 @@ class AuthService {
   async refreshToken() {
     try {
       const refreshToken = this.getRefreshToken();
-      
+
       if (!refreshToken) {
         throw new Error('Pas de refresh token disponible');
       }
@@ -121,7 +121,7 @@ class AuthService {
 
       if (response.success) {
         const { user, accessToken, refreshToken: newRefreshToken } = response.data;
-        
+
         this.setToken(accessToken);
         this.setRefreshToken(newRefreshToken);
         this.setUser(user);
@@ -251,6 +251,52 @@ class AuthService {
 
     const currentTime = Date.now() / 1000;
     return decoded.exp < currentTime;
+  }
+
+
+  // Envoyer le code de vérification par email
+  async sendVerificationCode(email) {
+    try {
+      const response = await this.request('/api/auth/send-code', {
+        method: 'POST',
+        body: JSON.stringify({ email }),
+      });
+
+      if (response.success) {
+        return { success: true, message: response.message };
+      }
+
+      throw new Error(response.message || 'Échec de l\'envoi du code');
+    } catch (error) {
+      console.error('Erreur d\'envoi du code:', error);
+      throw error;
+    }
+  }
+
+  // Vérifier le code et se connecter
+  async verifyCode(email, code) {
+    try {
+      const response = await this.request('/api/auth/verify-code', {
+        method: 'POST',
+        body: JSON.stringify({ email, code }),
+      });
+
+      if (response.success) {
+        const { user, accessToken, refreshToken } = response.data;
+
+        // Stocker les tokens et les infos utilisateur
+        this.setToken(accessToken);
+        this.setRefreshToken(refreshToken);
+        this.setUser(user);
+
+        return { success: true, user };
+      }
+
+      throw new Error(response.message || 'Code invalide');
+    } catch (error) {
+      console.error('Erreur de vérification du code:', error);
+      throw error;
+    }
   }
 }
 

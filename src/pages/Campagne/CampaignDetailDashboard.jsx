@@ -85,6 +85,7 @@ import CompactTimelineProgress from "@/utils/CompactTimelineProgress";
 import 'react-toastify/dist/ReactToastify.css';
 import { ToastContainer } from 'react-toastify';
 import Loading from "@/components/Loading";
+import toastify from "@/utils/toastify"
 import { getCampaignStatistics as getCampaignStatisticsEmelia, getCampaignactivities } from "@/services/Emelia";
 
 const SERVER_URL = import.meta.env.VITE_BASE_URL

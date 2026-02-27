@@ -8,7 +8,6 @@ const CONTACTS_ENDPOINT = '/ghl';
 export const testConnection = async (data) => {
   try {
     const response = await apiClient.post(`${CONTACTS_ENDPOINT}/test`, data);
-    console.log(response);
     
     return response.data
   } catch (error) {
