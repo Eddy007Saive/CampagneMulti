@@ -768,9 +768,12 @@ export function CampaignDetailDashboard() {
     clearEvents();
 
     try {
-      await connectToWorkflow('/webhook/contacts/supprimer/contact/reject', {
+      const resp=await connectToWorkflow('/webhook/supprimer/contact/reject', {
         id: campaignId
       });
+
+      console.log(resp);
+      
 
       // Recharger les données après suppression
       setTimeout(async () => {
@@ -1988,7 +1991,7 @@ export function CampaignDetailDashboard() {
             setDeleteOption('campaign-only'); // Reset option
           }
         }}
-        size="md"
+        size="lg"
         className="bg-gradient-to-br from-noir-absolu via-bleu-fonce/90 to-rouge-danger/10 border-2 border-rouge-danger/40 shadow-neon-red backdrop-blur-xl"
       >
         <DialogHeader className="flex items-center gap-3 pb-4 border-b border-rouge-danger/30 bg-gradient-to-r from-rouge-danger/10 to-orange-vif/10 relative">
@@ -2004,7 +2007,7 @@ export function CampaignDetailDashboard() {
           </Typography>
         </DialogHeader>
 
-        <DialogBody className="space-y-6 p-6">
+        <DialogBody className="max-h-[70vh] overflow-y-auto p-6 space-y-6">
           <div className="bg-gradient-to-r from-rouge-danger/5 to-orange-vif/5 rounded-xl p-4 border border-rouge-danger/20">
             <Typography className="text-blanc-pur mb-4">
               Vous êtes sur le point de supprimer la campagne <strong className="text-bleu-neon">"{campaignData.nom}"</strong>.
