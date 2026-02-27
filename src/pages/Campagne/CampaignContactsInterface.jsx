@@ -1535,16 +1535,6 @@ export function CampaignContactsInterface() {
                     </Button>
                 </DialogFooter>
             </Dialog>
-
-            <ToastContainer
-                position="bottom-right"
-                theme="dark"
-                toastStyle={{
-                    backgroundColor: '#1a1a1a',
-                    color: '#ffffff',
-                    border: '1px solid #FF0055',
-                }}
-            />
         </div>
     );
 }

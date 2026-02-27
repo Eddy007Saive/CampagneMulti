@@ -430,7 +430,6 @@ export function ImportProduits() {
           )}
         </div>
       </div>
-      <ToastContainer />
     </section>
   );
 }

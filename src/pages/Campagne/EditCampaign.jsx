@@ -502,13 +502,26 @@ const loadCampaignDetails = async (campaignId) => {
           return 'Au moins un email doit être configuré dans la séquence';
         }
 
-        for (let i = 0; i < value.length; i++) {
-          const step = value[i];
-          if (!step.subject || step.subject.trim().length < 3) {
-            return `Email ${i + 1} : le sujet doit contenir au moins 3 caractères`;
+        // ✅ Ignorer les emails désactivés
+        const emailsActifs = value.filter(step => !step.disabled);
+
+        if (emailsActifs.length === 0) {
+          return 'Au moins un email actif est requis dans la séquence';
+        }
+
+        for (let i = 0; i < emailsActifs.length; i++) {
+          const step = emailsActifs[i];
+          const num = value.indexOf(step) + 1;
+
+          // ✅ Sujet vide interdit — Emelia accepte en UI mais rejette via API
+          if (!step.subject || step.subject.trim().length === 0) {
+            return `Email ${num} : le sujet est vide — requis par l'API Emelia`;
+          }
+          if (step.subject.trim().length < 3) {
+            return `Email ${num} : le sujet doit contenir au moins 3 caractères`;
           }
           if (!step.message || step.message.trim().length < 10) {
-            return `Email ${i + 1} : le message doit contenir au moins 10 caractères`;
+            return `Email ${num} : le message doit contenir au moins 10 caractères`;
           }
         }
       } else if (!value || value.toString().trim() === "") {
@@ -531,6 +544,7 @@ const loadCampaignDetails = async (campaignId) => {
     return null;
   };
 
+  // ─── getFieldsForStep corrigé ───
   const getFieldsForStep = (step) => {
     switch (step) {
       case 0:
@@ -544,6 +558,8 @@ const loadCampaignDetails = async (campaignId) => {
       case 4:
         if (!formData.coldEmail) return [];
         const fields = ['coldDelayAfterFollowUp'];
+        // ✅ Toujours valider la séquence si cold email actif
+        // même en mode existing car Emelia accepte sujets vides en UI mais pas via API
         if (formData.coldEmailMode) {
           fields.push('emailSequence');
         }
@@ -552,6 +568,9 @@ const loadCampaignDetails = async (campaignId) => {
         return [];
     }
   };
+
+
+ 
 
   const validateCurrentStep = () => {
     const fieldsToValidate = getFieldsForStep(currentStep);
@@ -666,6 +685,30 @@ const loadCampaignDetails = async (campaignId) => {
   const onSubmit = async () => {
     setIsSubmitting(true);
     try {
+       
+    if (formData.coldEmail && formData.emailSequence) {
+      const emailsActifs = formData.emailSequence.filter(s => !s.disabled);
+      const emailsSansSubject = emailsActifs.filter(s => !s.subject?.trim());
+      const emailsSansMessage = emailsActifs.filter(
+        s => !s.message?.trim() || s.message.trim().length < 10
+      );
+
+      if (emailsSansSubject.length > 0) {
+        toastify.error(
+          `${emailsSansSubject.length} email(s) sans sujet — requis par l'API Emelia`
+        );
+        setIsSubmitting(false);
+        return;
+      }
+      if (emailsSansMessage.length > 0) {
+        toastify.error(
+          `${emailsSansMessage.length} email(s) sans message suffisant`
+        );
+        setIsSubmitting(false);
+        return;
+      }
+    }
+  
       const relancesIncompletes = formData.relances.filter(r =>
         !r.joursApres ||
         !r.instruction ||
