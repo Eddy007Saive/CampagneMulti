@@ -88,12 +88,15 @@ export function LinkedInConfigInterface() {
       if (status) {
         setSystemStatus(status);
 
-        // Charger la configuration
         if (status.configuration) {
+          const liAt = status.configuration.valeur || '';
+          const email = currentUser.email || '';
+          const userAgent = status.configuration.userAgent || '';
+
           setConfig({
-            liAt: status.configuration.valeur || '',
-            email: currentUser.email || '',
-            userAgent: status.configuration.userAgent || '',
+            liAt,
+            email,
+            userAgent,
             status: status.configuration.status || 'Actif',
             userId: currentUser?.id,
             emeliaApiKey: status.configuration.emeliaApiKey || '',
@@ -101,33 +104,26 @@ export function LinkedInConfigInterface() {
             ghlLocationId: status.configuration.ghlLocationId || ''
           });
 
-          // Initialiser les états d'édition basés sur l'existence des clés
-          setIsEditingEmelia(!status.configuration.emeliaApiKey);
-          setIsEditingGhl(!status.configuration.ghlApiKey);
-        }
-
-        // Charger le quota
-        if (status.quota) {
-          setQuota(status.quota);
-        }
-
-        // Mettre à jour le statut de validation
-        if (status.validation) {
-          const emeliaValid = status.validation.details?.emeliaValid || false;
-          const ghlValid = status.validation.details?.ghlValid || false;
+          // ✅ Valider automatiquement les champs pré-remplis
+          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+          const liAtValid = liAt.length >= 100 && !liAt.includes(' ');
+          const emailValid = email && emailRegex.test(email);
+          const userAgentValid = userAgent.length > 50 && userAgent.includes('Mozilla');
+          const emeliaValid = status.validation?.details?.emeliaValid || false;
+          const ghlValid = status.validation?.details?.ghlValid || false;
 
           setValidationStatus({
             liAt: {
-              valid: status.validation.details?.cookieValid || false,
-              message: status.validation.message
+              valid: liAtValid,
+              message: liAtValid ? 'Cookie valide' : 'Cookie invalide'
             },
             email: {
-              valid: status.validation.details?.emailValid || false,
-              message: status.validation.details?.emailValid ? 'Email valide' : 'Email invalide'
+              valid: emailValid,
+              message: emailValid ? 'Email valide' : 'Email invalide'
             },
             userAgent: {
-              valid: status.validation.details?.userAgentValid || false,
-              message: status.validation.details?.userAgentValid ? 'User-Agent valide' : 'User-Agent invalide'
+              valid: userAgentValid,
+              message: userAgentValid ? 'User-Agent valide' : 'User-Agent invalide'
             },
             emeliaApiKey: {
               valid: emeliaValid,
@@ -138,6 +134,13 @@ export function LinkedInConfigInterface() {
               message: ghlValid ? 'Connexion active' : ''
             }
           });
+
+          setIsEditingEmelia(!status.configuration.emeliaApiKey);
+          setIsEditingGhl(!status.configuration.ghlApiKey);
+        }
+
+        if (status.quota) {
+          setQuota(status.quota);
         }
       }
     } catch (error) {
@@ -146,7 +149,7 @@ export function LinkedInConfigInterface() {
       setIsLoading(false);
     }
   };
-
+  
   const handleInputChange = (field, value) => {
     setConfig(prev => ({
       ...prev,
