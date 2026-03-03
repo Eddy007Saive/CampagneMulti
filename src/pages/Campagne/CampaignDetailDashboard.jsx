@@ -85,6 +85,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import { ToastContainer } from 'react-toastify';
 import toastify from "@/utils/toastify"
 import Loading from "@/components/Loading";
+import toastify from "@/utils/toastify"
 import { getCampaignStatistics as getCampaignStatisticsEmelia, getCampaignactivities } from "@/services/Emelia";
 
 const SERVER_URL = import.meta.env.VITE_BASE_URL
@@ -767,9 +768,12 @@ export function CampaignDetailDashboard() {
     clearEvents();
 
     try {
-      await connectToWorkflow('/webhook/contacts/supprimer/contact/reject', {
+      const resp=await connectToWorkflow('/webhook/supprimer/contact/reject', {
         id: campaignId
       });
+
+      console.log(resp);
+      
 
       // Recharger les données après suppression
       setTimeout(async () => {

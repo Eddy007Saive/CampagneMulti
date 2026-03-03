@@ -7,6 +7,7 @@ import {
 } from '@/services/Configuration';
 import { testConnection } from '@/services/Emelia';
 import { testConnection as testConnectionGHL } from '@/services/GodHighLevel';
+import { testLinkedInConnection, validateCookieFormat } from '@/services/Linkedin';
 import Loading from '@/components/Loading';
 
 export function LinkedInConfigInterface() {
@@ -122,10 +123,14 @@ export function LinkedInConfigInterface() {
         setSystemStatus(status);
 
         if (status.configuration) {
+          const liAt = status.configuration.valeur || '';
+          const email = currentUser.email || '';
+          const userAgent = status.configuration.userAgent || '';
+
           setConfig({
-            liAt: status.configuration.valeur || '',
-            email: currentUser.email || '',
-            userAgent: status.configuration.userAgent || '',
+            liAt,
+            email,
+            userAgent,
             status: status.configuration.status || 'Actif',
             userId: currentUser?.id,
             emeliaApiKey: status.configuration.emeliaApiKey || '',
@@ -147,16 +152,16 @@ export function LinkedInConfigInterface() {
 
           setValidationStatus({
             liAt: {
-              valid: status.validation.details?.cookieValid || false,
-              message: status.validation.message
+              valid: liAtValid,
+              message: liAtValid ? 'Cookie valide' : 'Cookie invalide'
             },
             email: {
-              valid: status.validation.details?.emailValid || false,
-              message: status.validation.details?.emailValid ? 'Email valide' : 'Email invalide'
+              valid: emailValid,
+              message: emailValid ? 'Email valide' : 'Email invalide'
             },
             userAgent: {
-              valid: status.validation.details?.userAgentValid || false,
-              message: status.validation.details?.userAgentValid ? 'User-Agent valide' : 'User-Agent invalide'
+              valid: userAgentValid,
+              message: userAgentValid ? 'User-Agent valide' : 'User-Agent invalide'
             },
             emeliaApiKey: {
               valid: emeliaValid,
@@ -167,6 +172,13 @@ export function LinkedInConfigInterface() {
               message: ghlValid ? 'Connexion active' : ''
             }
           });
+
+          setIsEditingEmelia(!status.configuration.emeliaApiKey);
+          setIsEditingGhl(!status.configuration.ghlApiKey);
+        }
+
+        if (status.quota) {
+          setQuota(status.quota);
         }
       }
     } catch (error) {
@@ -175,7 +187,7 @@ export function LinkedInConfigInterface() {
       setIsLoading(false);
     }
   };
-
+  
   const handleInputChange = (field, value) => {
     setConfig(prev => ({
       ...prev,
@@ -193,12 +205,13 @@ export function LinkedInConfigInterface() {
         }
       }));
     } else if (field === 'liAt') {
-      const isValid = value && value.length > 50;
+      // Utiliser la nouvelle fonction de validation
+      const validation = validateCookieFormat(value);
       setValidationStatus(prev => ({
         ...prev,
         liAt: {
-          valid: isValid,
-          message: isValid ? 'Cookie valide' : 'Cookie invalide ou manquant'
+          valid: validation.valid,
+          message: validation.message
         }
       }));
     } else if (field === 'userAgent') {
@@ -228,6 +241,56 @@ export function LinkedInConfigInterface() {
           message: isValid ? 'Clé API valide' : 'Clé API invalide ou manquante'
         }
       }));
+    }
+  };
+
+  // Nouveau : Test de connexion LinkedIn
+  const handleTestLinkedInConnection = async () => {
+    if (!config.liAt) {
+      showNotification('Veuillez entrer un cookie LinkedIn', 'error');
+      return;
+    }
+
+    if (!config.userAgent) {
+      showNotification('Veuillez entrer un User-Agent', 'error');
+      return;
+    }
+
+    setIsTestingLinkedIn(true);
+    try {
+      const result = await testLinkedInConnection(config.liAt, config.userAgent);
+
+      if (result.success) {
+        showNotification('✅ Cookie LinkedIn validé avec succès !', 'success');
+        setValidationStatus(prev => ({
+          ...prev,
+          liAt: {
+            valid: true,
+            message: result.message + (result.data?.profileId ? ` (ID: ${result.data.profileId})` : '')
+          }
+        }));
+      } else {
+        showNotification('❌ ' + result.message, 'error');
+        setValidationStatus(prev => ({
+          ...prev,
+          liAt: {
+            valid: false,
+            message: result.message
+          }
+        }));
+      }
+    } catch (error) {
+      console.error('Erreur test LinkedIn:', error);
+      showNotification('❌ Erreur lors du test de connexion LinkedIn', 'error');
+      setValidationStatus(prev => ({
+        ...prev,
+        liAt: {
+          valid: false,
+          message: 'Erreur de connexion'
+        }
+      }));
+    } finally {
+      setIsTestingLinkedIn(false);
     }
   };
 
@@ -503,23 +566,44 @@ export function LinkedInConfigInterface() {
                 <label className="block text-sm font-medium text-[#00CFFF]/90 mb-2">
                   Cookie li_at (obligatoire)
                 </label>
-                <div className="relative">
-                  <input
-                    type={showCookies ? "text" : "password"}
-                    value={config.liAt}
-                    onChange={(e) => handleInputChange('liAt', e.target.value)}
-                    placeholder="Entrez votre cookie li_at..."
-                    className="w-full p-3 bg-[#0B1030]/50 border border-[#00CFFF]/40 rounded-lg 
-                      focus:ring-2 focus:ring-[#A63DFF] focus:border-[#A63DFF] 
-                      text-white placeholder-[#00CFFF]/50 pr-10
-                      transition-all duration-300 hover:border-[#00CFFF]/60"
-                  />
+                <div className="flex gap-2 flex-col sm:flex-row">
+                  <div className="relative flex-1">
+                    <input
+                      type={showCookies ? "text" : "password"}
+                      value={config.liAt}
+                      onChange={(e) => handleInputChange('liAt', e.target.value)}
+                      placeholder="Entrez votre cookie li_at..."
+                      className="w-full p-3 bg-[#0B1030]/50 border border-[#00CFFF]/40 rounded-lg 
+                        focus:ring-2 focus:ring-[#A63DFF] focus:border-[#A63DFF] 
+                        text-white placeholder-[#00CFFF]/50 pr-10
+                        transition-all duration-300 hover:border-[#00CFFF]/60"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowCookies(!showCookies)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#00CFFF]/60 hover:text-[#00CFFF] transition-colors"
+                    >
+                      {showCookies ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
+                  </div>
                   <button
-                    type="button"
-                    onClick={() => setShowCookies(!showCookies)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#00CFFF]/60 hover:text-[#00CFFF] transition-colors"
+                    onClick={handleTestLinkedInConnection}
+                    disabled={isTestingLinkedIn || !config.liAt || !config.userAgent}
+                    className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 
+                      text-white font-semibold rounded-lg
+                      hover:shadow-[0_0_20px_rgba(59,130,246,0.5)] transition-all duration-300 
+                      disabled:opacity-50 disabled:cursor-not-allowed 
+                      flex items-center justify-center gap-2 whitespace-nowrap
+                      sm:w-auto w-full"
                   >
-                    {showCookies ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    {isTestingLinkedIn ? (
+                      <>
+                        <Loader className="w-4 h-4 animate-spin" />
+                        Test...
+                      </>
+                    ) : (
+                      'Tester connexion'
+                    )}
                   </button>
                 </div>
                 {validationStatus.liAt && (
@@ -532,6 +616,9 @@ export function LinkedInConfigInterface() {
                     {validationStatus.liAt.message}
                   </div>
                 )}
+                <p className="mt-2 text-sm text-[#00CFFF]/60">
+                  Minimum 100 caractères, sans espaces. Utilisez le bouton de test pour vérifier la validité.
+                </p>
               </div>
             </div>
           </div>
@@ -583,7 +670,7 @@ export function LinkedInConfigInterface() {
                   </div>
                 )}
                 <p className="mt-2 text-sm text-[#00CFFF]/60">
-                  Identifie votre navigateur pour éviter la détection automatisée
+                  Identifie votre navigateur pour éviter la détection automatisée. Requis pour tester le cookie LinkedIn.
                 </p>
               </div>
             </div>
@@ -909,7 +996,8 @@ export function LinkedInConfigInterface() {
                     <div>1. Connectez-vous à LinkedIn</div>
                     <div>2. Ouvrez F12 → Application → Cookies</div>
                     <div>3. Trouvez "https://www.linkedin.com"</div>
-                    <div>4. Copiez la valeur "li_at"</div>
+                    <div>4. Copiez la valeur "li_at" (entière, sans espaces)</div>
+                    <div>5. Utilisez le bouton "Tester connexion" pour valider</div>
                   </div>
                 </div>
                 <div>

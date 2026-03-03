@@ -40,14 +40,14 @@ export const AuthProvider = ({ children }) => {
     try {
       setError(null);
       setLoading(true);
-      
+
       const result = await authService.login(credentials);
-      
+
       if (result.success) {
         setUser(result.user);
         return { success: true };
       }
-      
+
       throw new Error('Connexion échouée');
     } catch (error) {
       const errorMessage = error.message || 'Erreur lors de la connexion';
@@ -58,20 +58,65 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // 👉 NOUVEAU : Connexion avec Google
+  // Remplacer la fonction sendVerificationCode
+  const sendVerificationCode = async (email) => {
+    try {
+      setError(null);
+      setLoading(true);
+
+      const result = await authService.sendVerificationCode(email);
+
+      if (result.success) {
+        return { success: true, message: result.message };
+      }
+
+      throw new Error('Échec de l\'envoi du code');
+    } catch (error) {
+      const errorMessage = error.message || 'Erreur lors de l\'envoi du code';
+      setError(errorMessage);
+      return { success: false, error: errorMessage };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Remplacer la fonction verifyCode
+  const verifyCode = async (email, code) => {
+    try {
+      setError(null);
+      setLoading(true);
+
+      const result = await authService.verifyCode(email, code);
+
+      if (result.success) {
+        setUser(result.user);
+        return { success: true, user: result.user };
+      }
+
+      throw new Error('Code invalide');
+    } catch (error) {
+      const errorMessage = error.message || 'Erreur lors de la vérification du code';
+      setError(errorMessage);
+      return { success: false, error: errorMessage };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
   const loginWithGoogle = async (googleData) => {
     try {
       setError(null);
       setLoading(true);
-      
+
       // Stocker les tokens
       localStorage.setItem('accessToken', googleData.accessToken);
       localStorage.setItem('refreshToken', googleData.refreshToken);
       localStorage.setItem('user', JSON.stringify(googleData.user));
-      
+
       // Mettre à jour le state
       setUser(googleData.user);
-      
+
       return { success: true, user: googleData.user };
     } catch (error) {
       const errorMessage = error.message || 'Erreur lors de la connexion Google';
@@ -87,14 +132,14 @@ export const AuthProvider = ({ children }) => {
     try {
       setError(null);
       setLoading(true);
-      
+
       const result = await authService.register(userData);
-      
+
       if (result.success) {
         setUser(result.user);
         return { success: true };
       }
-      
+
       throw new Error('Inscription échouée');
     } catch (error) {
       const errorMessage = error.message || 'Erreur lors de l\'inscription';
@@ -168,6 +213,8 @@ export const AuthProvider = ({ children }) => {
     isAuthenticated,
     updateUser,
     setError,
+    verifyCode,
+    sendVerificationCode
   };
 
   return (

@@ -1,0 +1,322 @@
+{
+    "nodes": [
+        {
+            "parameters": {
+                "rule": {
+                    "interval": [
+                        {
+                            "field": "hours"
+                        }
+                    ]
+                }
+            },
+            "id": "48918002-d032-44d6-9599-d8ebc9972f28",
+            "name": "Every Day at 9am",
+            "type": "n8n-nodes-base.scheduleTrigger",
+            "typeVersion": 1.1,
+            "position": [
+                -32,
+                672
+            ]
+        },
+        {
+            "parameters": {
+                "url": "https://api.open-meteo.com/v1/forecast",
+                "sendQuery": true,
+                "queryParameters": {
+                    "parameters": [
+                        {
+                            "name": "latitude",
+                            "value": "48.8566"
+                        },
+                        {
+                            "name": "longitude",
+                            "value": "2.3522"
+                        },
+                        {
+                            "name": "current_weather",
+                            "value": "true"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "id": "9003cba9-d324-46cc-91bb-72540452dff9",
+            "name": "Get Weather (Paris)",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.3,
+            "position": [
+                208,
+                672
+            ]
+        },
+        {
+            "parameters": {
+                "content": "### 🌦️ Niveau 1 : Récupérer la Météo\n\nCe workflow tourne tous les jours grâce au **Schedule Trigger**.\n\n**Comment configurer le nœud HTTP Request ?**\n\n1.  **URL :** `https://api.open-meteo.com/v1/forecast`\n2.  **Query Parameters :** C'est ici qu'on précise la ville.\n    *   `latitude`: 48.8566 (Paris)\n    *   `longitude`: 2.3522 (Paris)\n    *   `current_weather`: true (Pour avoir la météo de maintenant)\n\n*Astuce : Changez la latitude/longitude pour mettre votre ville !*",
+                "height": 346,
+                "width": 387,
+                "color": 3
+            },
+            "id": "05d5ca63-389c-4948-b795-b6ccbee20642",
+            "name": "Tutorial Note",
+            "type": "n8n-nodes-base.stickyNote",
+            "typeVersion": 1,
+            "position": [
+                336,
+                576
+            ]
+        },
+        {
+            "parameters": {
+                "content": "# 🚀 Tuto: Maîtriser le HTTP Request\nCe workflow est un guide interactif. Activez les nœuds un par un pour comprendre la logique.\n\n### 🟢 Niveau 1 : Le GET (Lecture simple)\nL'équivalent de taper une adresse dans votre navigateur.\n*   **Méthode :** GET\n*   **Usage :** Récupérer de la donnée publique (Météo, Blague, Info).\n*   **Astuce :** Pas besoin d'authentification ici.\n\n### 🟡 Niveau 2 : Le POST (Envoi de données)\nOn envoie de l'info vers un serveur (ex: Discord, Slack).\n*   **Méthode :** POST\n*   **Body :** C'est le contenu du message (Format JSON).\n*   **Structure :** `{\"text\": \"Bonjour\"}`",
+                "height": 512,
+                "width": 416,
+                "color": 6
+            },
+            "type": "n8n-nodes-base.stickyNote",
+            "position": [
+                -752,
+                320
+            ],
+            "typeVersion": 1,
+            "id": "9a14b122-e626-476e-89e0-80403c5619f9",
+            "name": "Sticky Note"
+        },
+        {
+            "parameters": {},
+            "id": "5c4da848-5e3d-48c3-9955-c554bed7c17d",
+            "name": "Click to Test",
+            "type": "n8n-nodes-base.manualTrigger",
+            "typeVersion": 1,
+            "position": [
+                -192,
+                1104
+            ]
+        },
+        {
+            "parameters": {
+                "url": "https://api.open-meteo.com/v1/forecast",
+                "sendQuery": true,
+                "queryParameters": {
+                    "parameters": [
+                        {
+                            "name": "latitude",
+                            "value": "48.8566"
+                        },
+                        {
+                            "name": "longitude",
+                            "value": "2.3522"
+                        },
+                        {
+                            "name": "current_weather",
+                            "value": "true"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "id": "74f441ec-4b24-48bd-a850-679af81b01ef",
+            "name": "1. GET Weather",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.3,
+            "position": [
+                32,
+                1104
+            ]
+        },
+        {
+            "parameters": {
+                "content": "### 🟡 Niveau 2 : La méthode POST (Telegram)\nIci, on récupère la météo (comme au niveau 1) et on **l'envoie** sur Telegram.\\n\\n#### Comment configurer le Nœud 2 (POST) ?\n1.  **Method :** Changez `GET` en `POST`.\n2.  **URL :** `https://api.telegram.org/bot<VOTRE_TOKEN>/sendMessage`   *(Remplacez `<VOTRE_TOKEN>` par celui donné par @BotFather)*.\n3.  **Body Parameters :** Telegram a besoin de savoir **à qui** et **quoi** envoyer.\n    *   **Clé 1 :** `chat_id` (Votre ID Telegram).\n    *   **Clé 2 :** `text` (Le contenu du message).\n   *   **Valeur du text :** Utilisez une **Expression** (champs verts) pour mélanger du texte et la variable Température.",
+                "height": 360,
+                "width": 400,
+                "color": 3
+            },
+            "id": "8eb87242-f96e-405a-8696-2e08944f89ca",
+            "name": "Sticky Note2",
+            "type": "n8n-nodes-base.stickyNote",
+            "typeVersion": 1,
+            "position": [
+                352,
+                992
+            ]
+        },
+        {
+            "parameters": {
+                "url": "https://swapi.py4e.com/api/people/",
+                "options": {
+                    "pagination": {
+                        "pagination": {
+                            "parameters": {
+                                "parameters": [
+                                    {
+                                        "name": "page",
+                                        "value": "={{ $pageCount + 1 }}"
+                                    }
+                                ]
+                            },
+                            "paginationCompleteWhen": "other",
+                            "completeExpression": "={{ $response.body.next === null }}",
+                            "limitPagesFetched": true,
+                            "maxRequests": 10
+                        }
+                    }
+                }
+            },
+            "id": "405c30a3-9859-41f1-b437-85d8c4f72fa0",
+            "name": "Get Star Wars Characters",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.3,
+            "position": [
+                176,
+                2016
+            ]
+        },
+        {
+            "parameters": {
+                "content": "### 🔵 Niveau 4 : La Pagination (boucle)\n\nPar défaut, cette API ne retourne que **10 personnages par requête**.\nNotre objectif est de **récupérer tous les personnages**.\n\n#### 👀 Observez la configuration :\n\n1. Ouvrez le nœud.\n2. En bas, vérifiez que **Pagination** est activée.\n3. **Mode :** `Parameter-based pagination`\n4. **Paramètre de pagination :** `page`\n5. La valeur du paramètre `page` est **incrémentée automatiquement** par n8n.\n6. **Condition d’arrêt (Pagination Completed When) :**\n   La pagination s’arrête lorsque l’API ne retourne plus de page suivante.\n\n👉 Lancez le nœud :\nn8n effectuera les requêtes **page par page** (`page=1`, `page=2`, …) jusqu’à récupérer **tous les personnages (80+)** en une seule exécution.\n",
+                "height": 548,
+                "width": 432,
+                "color": 4
+            },
+            "id": "63b4cf3a-3e45-49bf-8888-b2f6184bd351",
+            "name": "Sticky Note1",
+            "type": "n8n-nodes-base.stickyNote",
+            "typeVersion": 1,
+            "position": [
+                336,
+                1888
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://api.telegram.org/botREMPLACEZ_PAR_VOTRE_TOKEN/sendMessage",
+                "sendBody": true,
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "chat_id",
+                            "value": "REMPLACEZ_PAR_VOTRE_ID"
+                        },
+                        {
+                            "name": "text",
+                            "value": "={{ '🌡️ Météo Paris : Il fait actuellement ' + $json.current_weather.temperature + '°C' }}"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "id": "605335fb-4d92-4476-8194-3556be3e4c09",
+            "name": "2. POST to Telegram",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.3,
+            "position": [
+                208,
+                1104
+            ]
+        },
+        {
+            "parameters": {
+                "url": "https://httpbin.org/bearer",
+                "authentication": "genericCredentialType",
+                "genericAuthType": "httpHeaderAuth",
+                "options": {}
+            },
+            "id": "ea9e38db-76d6-44fb-b462-b7bee806cac3",
+            "name": "HTTP Request (Auth)",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.3,
+            "position": [
+                192,
+                1584
+            ],
+            "credentials": {
+                "httpHeaderAuth": {
+                    "id": "gG8kVMFdJhscudGZ",
+                    "name": "token_X_auth"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "content": "### 🟧 Niveau 3 : Authentification (Headers)\n\nLes APIs sérieuses (OpenAI, Airtable) demandent une clé secrète. Dans n8n, on utilise des **Credentials** pour sécuriser ça.\n\n#### 🛠️ Exercice Pratique :\nLe nœud est rouge ? C'est normal, il faut créer la clé !\n\n1.  Double-cliquez sur le nœud **HTTP Request**.\n2.  Sous **Authentication**, vérifiez que c'est sur `Generic Credential Type`.\n3.  Sous **Generic Auth Type**, choisissez `Header Auth`.\n4.  Cliquez sur **Create New** (ou sélectionnez-en un).\n    *   **Name:** `Authorization`\n    *   **Value:** `Bearer MonCodeSecret`\n5.  Sauvegardez et lancez le workflow.\n\n👉 **Succès :** Si le résultat affiche `\"authenticated\": true`, c'est gagné !",
+                "height": 400,
+                "width": 420,
+                "color": 2
+            },
+            "id": "e6596176-0df5-420e-8709-810bb1377959",
+            "name": "Sticky Note3",
+            "type": "n8n-nodes-base.stickyNote",
+            "typeVersion": 1,
+            "position": [
+                336,
+                1424
+            ]
+        },
+        {
+            "parameters": {
+                "url": "https://swapi.py4e.com/api/people/",
+                "options": {
+                    "pagination": {
+                        "pagination": {
+                            "paginationMode": "responseContainsNextURL",
+                            "nextURL": "next",
+                            "paginationCompleteWhen": "other",
+                            "completeExpression": "={{ $response.body.next === null }}",
+                            "limitPagesFetched": true,
+                            "maxRequests": 10
+                        }
+                    }
+                }
+            },
+            "id": "5f275b2f-ce63-48ef-9238-45a910dfcf3f",
+            "name": "Get Star Wars Characters1",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.3,
+            "position": [
+                176,
+                2208
+            ]
+        }
+    ],
+    "connections": {
+        "Every Day at 9am": {
+            "main": [
+                [
+                    {
+                        "node": "Get Weather (Paris)",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Click to Test": {
+            "main": [
+                [
+                    {
+                        "node": "Get Star Wars Characters1",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "1. GET Weather": {
+            "main": [
+                [
+                    {
+                        "node": "2. POST to Telegram",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "pinData": {},
+    "meta": {
+        "templateCredsSetupCompleted": true,
+        "instanceId": "b90d30a6879f8130f189ef0684578477b9e5cce9c1208eaeb8db84307d3841be"
+    }
+}
