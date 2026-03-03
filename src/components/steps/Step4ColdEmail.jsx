@@ -254,27 +254,19 @@ export const Step4ColdEmail = ({
     const [emeliaCampaigns, setEmeliaCampaigns] = useState([]);
     const [isEditMode, setIsEditMode] = useState(false);
 
-    // ✅ FIX: mapping corrigé avec delay HOURS par défaut (comme dans la réponse Emelia)
     const loadCampaignDetails = async (campaignId) => {
         if (!campaignId) return;
         setEmeliaLoading(true);
         try {
             const result = await emeliaService.getCampaignDetails(campaignId);
-            console.log("📧 Réponse brute Emelia:", result);
-
-            // ✅ FIX: supporter les différents formats de réponse du service
             const camp = result.campaign || result.data?.campaign || result.data;
-            console.log("📦 camp extrait:", camp);
-            console.log("📦 camp.steps:", camp?.steps);
 
             if (result.success && camp && camp.steps) {
-
                 const mapDaysFromEmelia = (days) => {
                     const dayMap = { 1: 'Lundi', 2: 'Mardi', 3: 'Mercredi', 4: 'Jeudi', 5: 'Vendredi', 6: 'Samedi', 0: 'Dimanche' };
                     return days?.map(d => dayMap[d]).filter(Boolean) || [];
                 };
 
-                // ✅ FIX: mapping correct de la séquence
                 let emailSequenceData = [];
                 if (camp.steps && camp.steps.length > 0) {
                     emailSequenceData = camp.steps.map((step, index) => ({
@@ -287,8 +279,6 @@ export const Step4ColdEmail = ({
                         attachments: step.versions?.[0]?.attachments || []
                     }));
                 }
-
-                console.log("✅ emailSequenceData mappé:", emailSequenceData);
 
                 setFormData(prev => ({
                     ...prev,
@@ -305,14 +295,10 @@ export const Step4ColdEmail = ({
                     emeliaAddToBlacklistIfUnsubscribed: camp.schedule?.blacklistUnsub ?? prev.emeliaAddToBlacklistIfUnsubscribed,
                     emeliaTrackOpens: camp.schedule?.trackOpens ?? prev.emeliaTrackOpens,
                     emeliaTrackClicks: camp.schedule?.trackLinks ?? prev.emeliaTrackClicks,
-                    // ✅ toujours écraser la séquence avec les données fraîches d'Emelia
                     emailSequence: emailSequenceData.length > 0 ? emailSequenceData : prev.emailSequence,
-                    // ✅ garde l'ID déjà setté dans le onChange
                     coldCampaignIdEmelia: prev.coldCampaignIdEmelia || campaignId
                 }));
 
-                // ✅ FIX PRINCIPAL: pointer sur le premier email de la nouvelle séquence
-                // (l'ancien emailStepSelected pointait vers un ID qui n'existe plus)
                 if (emailSequenceData.length > 0) {
                     setEmailStepSelected(emailSequenceData[0].id);
                 }
@@ -661,7 +647,6 @@ export const Step4ColdEmail = ({
                                 value={formData.coldDelayAfterFollowUp || "1"}
                                 onChange={(e) => {
                                     const val = parseInt(e.target.value);
-                                    // ✅ Bloquer si 0 ou vide, minimum 1
                                     if (!val || val < 1) {
                                         setFormData(prev => ({ ...prev, coldDelayAfterFollowUp: "1" }));
                                     } else {
@@ -673,7 +658,6 @@ export const Step4ColdEmail = ({
                             />
                             <span className="text-gray-400">jour{parseInt(formData.coldDelayAfterFollowUp) > 1 ? 's' : ''}</span>
                         </div>
-                        {/* ✅ Erreur si 0 ou vide */}
                         {(!formData.coldDelayAfterFollowUp || parseInt(formData.coldDelayAfterFollowUp) < 1) && (
                             <p className="text-red-500 text-xs mt-2 flex items-center">
                                 <AlertCircle size={12} className="mr-1" />
@@ -688,7 +672,7 @@ export const Step4ColdEmail = ({
                         )}
                     </div>
 
-                    {/* Mode de campagne - uniquement si pas de campagne déjà liée */}
+                    {/* Mode de campagne */}
                     {!formData.coldCampaignIdEmelia && (
                         <div className="p-6 bg-gray-800 rounded-lg border-2 border-gray-700">
                             <h4 className="text-white font-semibold mb-4">Mode de campagne</h4>
@@ -718,7 +702,6 @@ export const Step4ColdEmail = ({
                                             </div>
                                         ) : emeliaCampaigns.length > 0 ? (
                                             <>
-                                                {/* ✅ FIX: ID enregistré immédiatement AVANT loadCampaignDetails */}
                                                 <select value={formData.coldCampaignIdEmelia}
                                                     onChange={(e) => {
                                                         const selectedId = e.target.value;
@@ -757,7 +740,7 @@ export const Step4ColdEmail = ({
                                     </div>
                                 )}
 
-                                <label className={`flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all ${formData.coldEmailMode === 'auto' ? 'border-blue-500 bg-blue-900/20' : 'border-gray-600 hover:border-gray-500'}`}>
+                                <label className={`flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all ${formData.coldEmailMode === 'auto' ? 'border-green-500 bg-green-900/20' : 'border-gray-600 hover:border-gray-500'}`}>
                                     <input type="radio" name="coldEmailMode" value="auto"
                                         checked={formData.coldEmailMode === 'auto'}
                                         onChange={(e) => setFormData(prev => ({ ...prev, coldEmailMode: e.target.value, coldCampaignIdEmelia: "" }))}
@@ -796,7 +779,7 @@ export const Step4ColdEmail = ({
                     )}
 
                     {/* ══════════════════════════════════════════
-                        MODE EXISTING: lecture seule + séquence
+                        MODE EXISTING: séquence éditable
                     ══════════════════════════════════════════ */}
                     {formData.coldEmailMode === "existing" && formData.coldCampaignIdEmelia && (
                         <>
@@ -867,7 +850,6 @@ export const Step4ColdEmail = ({
                                 )}
                             </div>
 
-                            {/* ✅ FIX PRINCIPAL: séquence - condition simplifiée sans isEditMode */}
                             {formData.emailSequence && formData.emailSequence.length > 0 ? (
                                 <div className="p-6 bg-gray-800 rounded-lg border-2 border-gray-700">
                                     <div className="flex items-center justify-between mb-6">
@@ -880,17 +862,19 @@ export const Step4ColdEmail = ({
                                         </span>
                                     </div>
                                     <div className="relative mb-6">
-                                        <EmailTimeline 
-                                        color="blue"
-                                        formData={formData}
-                                        emailStepSelected={emailStepSelected}
-                                        setEmailStepSelected={setEmailStepSelected}
-                                        supprimerEmailStep={supprimerEmailStep}
-                                        ajouterEmailStep={ajouterEmailStep}
-                                    />
+                                        <EmailTimeline
+                                            color="blue"
+                                            formData={formData}
+                                            emailStepSelected={emailStepSelected}
+                                            setEmailStepSelected={setEmailStepSelected}
+                                            supprimerEmailStep={supprimerEmailStep}
+                                            ajouterEmailStep={ajouterEmailStep}
+                                        />
                                     </div>
-                                    <EmailEditor 
+                                    {/* ✅ CORRIGÉ: readOnly={false} → séquence éditable en mode existing */}
+                                    <EmailEditor
                                         color="blue"
+                                        readOnly={false}
                                         emailStepSelected={emailStepSelected}
                                         formData={formData}
                                         deplacerEmailStep={deplacerEmailStep}
@@ -915,7 +899,7 @@ export const Step4ColdEmail = ({
                     )}
 
                     {/* ══════════════════════════════════════════
-                        MODE AUTO: config éditable + séquence
+                        MODE AUTO: config éditable + séquence éditable
                     ══════════════════════════════════════════ */}
                     {formData.coldEmailMode === "auto" && (
                         <>
@@ -1050,23 +1034,19 @@ export const Step4ColdEmail = ({
                                 </div>
                             </div>
 
-                            {/* Séquence auto - lecture seule */}
-                            {formData.emailSequence && formData.emailSequence.length > 0 && (
-                                <div className="p-6 bg-gray-800 rounded-lg border-2 border-gray-700">
-                                    <div className="flex items-center gap-2 mb-5">
-                                        <h4 className="text-white font-semibold flex items-center gap-2">
-                                            <MessageSquare size={18} className="text-green-400" />
-                                            Séquence d'emails générée
-                                        </h4>
-                                        <span className="text-xs text-green-400 px-2 py-1 bg-green-900/30 rounded">
-                                            Lecture seule
-                                        </span>
-                                        <span className="text-sm text-gray-400 ml-auto">
-                                            {formData.emailSequence.length} étape{formData.emailSequence.length > 1 ? 's' : ''}
-                                        </span>
-                                    </div>
-                                    <div className="relative mb-6">
-                                        <EmailTimeline 
+                            {/* ✅ CORRIGÉ: Séquence éditable en mode auto (readOnly supprimé) */}
+                            <div className="p-6 bg-gray-800 rounded-lg border-2 border-gray-700">
+                                <div className="flex items-center justify-between mb-6">
+                                    <h4 className="text-white font-semibold flex items-center gap-2">
+                                        <MessageSquare size={18} className="text-green-400" />
+                                        Séquence d'emails
+                                    </h4>
+                                    <span className="text-sm text-gray-400">
+                                        {formData.emailSequence.length} étape{formData.emailSequence.length > 1 ? 's' : ''}
+                                    </span>
+                                </div>
+                                <div className="relative mb-6">
+                                    <EmailTimeline
                                         color="green"
                                         formData={formData}
                                         emailStepSelected={emailStepSelected}
@@ -1074,20 +1054,20 @@ export const Step4ColdEmail = ({
                                         supprimerEmailStep={supprimerEmailStep}
                                         ajouterEmailStep={ajouterEmailStep}
                                     />
-                                    </div>
-                                    <EmailEditor 
-                                        color="green"
-                                        readOnly={true}
-                                        emailStepSelected={emailStepSelected}
-                                        formData={formData}
-                                        deplacerEmailStep={deplacerEmailStep}
-                                        modifierEmailDelay={modifierEmailDelay}
-                                        modifierEmailStep={modifierEmailStep}
-                                        emailTemplates={emailTemplates}
-                                        setEmailStepSelected={setEmailStepSelected}
-                                    />
                                 </div>
-                            )}
+                                {/* ✅ CORRIGÉ: readOnly={false} → séquence pleinement éditable */}
+                                <EmailEditor
+                                    color="green"
+                                    readOnly={false}
+                                    emailStepSelected={emailStepSelected}
+                                    formData={formData}
+                                    deplacerEmailStep={deplacerEmailStep}
+                                    modifierEmailDelay={modifierEmailDelay}
+                                    modifierEmailStep={modifierEmailStep}
+                                    emailTemplates={emailTemplates}
+                                    setEmailStepSelected={setEmailStepSelected}
+                                />
+                            </div>
                         </>
                     )}
                 </>

@@ -38,9 +38,9 @@ export function LinkedInConfigInterface() {
   const [currentUser, setCurrentUser] = useState(null);
   const [isTestingEmelia, setIsTestingEmelia] = useState(false);
   const [isTestingGhl, setIsTestingGhl] = useState(false);
-  const [isTestingLinkedIn, setIsTestingLinkedIn] = useState(false);
-  const [isEditingEmelia, setIsEditingEmelia] = useState(false);
-  const [isEditingGhl, setIsEditingGhl] = useState(false);
+
+  const [isEmeliaConnected, setIsEmeliaConnected] = useState(false);
+  const [isGhlConnected, setIsGhlConnected] = useState(false);
 
   // Récupérer l'utilisateur depuis le localStorage
   useEffect(() => {
@@ -54,8 +54,6 @@ export function LinkedInConfigInterface() {
             ...prev,
             userId: user.id
           }));
-          console.log("ok");
-
         } else {
           console.warn('Aucun utilisateur trouvé dans le localStorage');
         }
@@ -66,6 +64,42 @@ export function LinkedInConfigInterface() {
 
     getUserFromStorage();
   }, []);
+
+  // ✅ CORRECTIF : Recalculer la validation quand config est pré-rempli
+  useEffect(() => {
+    if (!config.liAt && !config.email && !config.userAgent) return;
+
+    setValidationStatus(prev => {
+      const next = { ...prev };
+
+      if (config.liAt) {
+        const valid = config.liAt.length > 50;
+        next.liAt = { valid, message: valid ? 'Cookie valide' : 'Cookie invalide ou manquant' };
+      }
+
+      if (config.email) {
+        const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(config.email);
+        next.email = { valid, message: valid ? 'Email valide' : 'Email invalide' };
+      }
+
+      if (config.userAgent) {
+        const valid = config.userAgent.length > 50 && config.userAgent.includes('Mozilla');
+        next.userAgent = { valid, message: valid ? 'User-Agent valide' : 'User-Agent invalide ou manquant' };
+      }
+
+      if (config.emeliaApiKey && !prev.emeliaApiKey?.valid) {
+        const valid = config.emeliaApiKey.length > 20;
+        next.emeliaApiKey = { valid, message: valid ? 'Clé API valide' : 'Clé API invalide ou manquante' };
+      }
+
+      if (config.ghlApiKey && !prev.ghlApiKey?.valid) {
+        const valid = config.ghlApiKey.length > 20;
+        next.ghlApiKey = { valid, message: valid ? 'Clé API valide' : 'Clé API invalide ou manquante' };
+      }
+
+      return next;
+    });
+  }, [config.liAt, config.email, config.userAgent, config.emeliaApiKey, config.ghlApiKey]);
 
   // Auto-détecter le User-Agent du navigateur actuel
   const detectUserAgent = () => {
@@ -84,7 +118,6 @@ export function LinkedInConfigInterface() {
     setIsLoading(true);
     try {
       const status = await getSystemStatus(currentUser);
-      console.log(status);
 
       if (status) {
         setSystemStatus(status);
@@ -105,13 +138,17 @@ export function LinkedInConfigInterface() {
             ghlLocationId: status.configuration.ghlLocationId || ''
           });
 
-          // ✅ Valider automatiquement les champs pré-remplis
-          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-          const liAtValid = liAt.length >= 100 && !liAt.includes(' ');
-          const emailValid = email && emailRegex.test(email);
-          const userAgentValid = userAgent.length > 50 && userAgent.includes('Mozilla');
-          const emeliaValid = status.validation?.details?.emeliaValid || false;
-          const ghlValid = status.validation?.details?.ghlValid || false;
+          setIsEmeliaConnected(status.configuration.emeliaKey === true);
+          setIsGhlConnected(status.configuration.ghlapikey === true);
+        }
+
+        if (status.quota) {
+          setQuota(status.quota);
+        }
+
+        if (status.validation) {
+          const emeliaValid = status.validation.details?.emeliaValid || false;
+          const ghlValid = status.validation.details?.ghlValid || false;
 
           setValidationStatus({
             liAt: {
@@ -157,7 +194,6 @@ export function LinkedInConfigInterface() {
       [field]: value
     }));
 
-    // Validation en temps réel
     if (field === 'email') {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       const isValid = value && emailRegex.test(value);
@@ -277,7 +313,6 @@ export function LinkedInConfigInterface() {
             message: 'Connexion réussie'
           }
         }));
-        // ✅ CORRIGÉ : test réussi → passe en mode "Déjà connecté"
         setIsEmeliaConnected(true);
       } else {
         showNotification('❌ Échec de connexion Emelia: ' + (result.error || 'Erreur inconnue'), 'error');
@@ -327,7 +362,6 @@ export function LinkedInConfigInterface() {
             message: 'Location ID validé'
           }
         }));
-        // ✅ CORRIGÉ : test réussi → passe en mode "Déjà connecté"
         setIsGhlConnected(true);
       } else {
         showNotification('❌ Échec de connexion GHL', 'error');
@@ -705,7 +739,6 @@ export function LinkedInConfigInterface() {
                   Clé API Emelia
                 </label>
 
-                {/* ✅ CORRIGÉ : isEmeliaConnected = true → affiche "Déjà connecté" */}
                 {isEmeliaConnected ? (
                   <div className="flex items-center justify-between p-4 bg-green-500/10 border border-green-400/30 rounded-lg">
                     <div className="flex items-center gap-3">
@@ -772,7 +805,6 @@ export function LinkedInConfigInterface() {
                         {validationStatus.emeliaApiKey.message}
                       </div>
                     )}
-                    {/* ✅ CORRIGÉ : bouton Annuler remet isEmeliaConnected à true */}
                     {config.emeliaApiKey && (
                       <button
                         onClick={() => setIsEmeliaConnected(true)}
@@ -804,7 +836,6 @@ export function LinkedInConfigInterface() {
 
             <div className="p-6 space-y-6">
               <div>
-                {/* ✅ CORRIGÉ : isGhlConnected = true → affiche "Déjà connecté" */}
                 {isGhlConnected ? (
                   <div className="flex items-center justify-between p-4 bg-green-500/10 border border-green-400/30 rounded-lg">
                     <div className="flex items-center gap-3">
@@ -901,7 +932,6 @@ export function LinkedInConfigInterface() {
                       )}
                     </div>
 
-                    {/* ✅ CORRIGÉ : bouton Annuler remet isGhlConnected à true */}
                     {config.ghlApiKey && (
                       <button
                         onClick={() => setIsGhlConnected(true)}

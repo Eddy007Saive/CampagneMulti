@@ -98,7 +98,7 @@ export const updateCampagne = async (id, campagneData) => {
  */
 export const deleteCampagne = async (id) => {
   try {
-    const response = await apiClient.delete(`/campagnes/${id}`);
+    const response = await apiClient.delete(`/campagne/${id}`);
     return response.data;
   } catch (error) {
     console.error('Erreur lors de la suppression de la campagne:', error);
