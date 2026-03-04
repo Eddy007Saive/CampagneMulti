@@ -79,6 +79,8 @@ export function Home() {
 
         // Charger les contacts
         const contactsResponse = await getAllContacts();
+
+        
         
         setContactsData(contactsResponse.result.data || []);
 

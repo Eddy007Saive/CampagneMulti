@@ -244,8 +244,9 @@ const EmailTimeline = ({
                         <button
                             type="button"
                             onClick={() => setEmailStepSelected(step.id)}
-                            className={`w-full relative rounded-lg p-4 transition-all duration-200 shadow-lg cursor-pointer bg-gray-800 border-2 ${emailStepSelected === step.id ? borderSelected : `border-gray-700 ${borderHover}`
-                                }`}
+                            className={`w-full relative rounded-lg p-4 transition-all duration-200 shadow-lg cursor-pointer bg-gray-800 border-2 ${
+                                emailStepSelected === step.id ? borderSelected : `border-gray-700 ${borderHover}`
+                            }`}
                         >
                             <div className="flex flex-col items-center gap-2">
                                 <div className={`w-10 h-10 rounded-full flex items-center justify-center ${index === 0 ? bgIcon0 : "bg-purple-600"}`}>
@@ -257,12 +258,13 @@ const EmailTimeline = ({
                                 <span className="text-gray-400 text-xs">
                                     {index === 0
                                         ? "Immédiat"
-                                        : `Attendre ${step.delay.amount} ${step.delay.unit === "DAYS"
-                                            ? "jour(s)"
-                                            : step.delay.unit === "HOURS"
-                                                ? "heure(s)"
-                                                : "minute(s)"
-                                        }`}
+                                        : `Attendre ${step.delay.amount} ${
+                                              step.delay.unit === "DAYS"
+                                                  ? "jour(s)"
+                                                  : step.delay.unit === "HOURS"
+                                                  ? "heure(s)"
+                                                  : "minute(s)"
+                                          }`}
                                 </span>
                             </div>
                             {(step.subject || step.message) && (
@@ -397,145 +399,34 @@ export const Step4ColdEmail = ({ formData, setFormData, stepValidationErrors, em
     };
 
     const timezoneOptions = {
-        "Africa": [
-            "Africa/Abidjan", "Africa/Accra", "Africa/Addis_Ababa", "Africa/Algiers",
-            "Africa/Asmara", "Africa/Bamako", "Africa/Bangui", "Africa/Banjul",
-            "Africa/Bissau", "Africa/Blantyre", "Africa/Brazzaville", "Africa/Bujumbura",
-            "Africa/Cairo", "Africa/Casablanca", "Africa/Ceuta", "Africa/Conakry",
-            "Africa/Dakar", "Africa/Dar_es_Salaam", "Africa/Djibouti", "Africa/Douala",
-            "Africa/El_Aaiun", "Africa/Freetown", "Africa/Gaborone", "Africa/Harare",
-            "Africa/Johannesburg", "Africa/Juba", "Africa/Kampala", "Africa/Khartoum",
-            "Africa/Kigali", "Africa/Kinshasa", "Africa/Lagos", "Africa/Libreville",
-            "Africa/Lome", "Africa/Luanda", "Africa/Lubumbashi", "Africa/Lusaka",
-            "Africa/Malabo", "Africa/Maputo", "Africa/Maseru", "Africa/Mbabane",
-            "Africa/Mogadishu", "Africa/Monrovia", "Africa/Nairobi", "Africa/Ndjamena",
-            "Africa/Niamey", "Africa/Nouakchott", "Africa/Ouagadougou", "Africa/Porto-Novo",
-            "Africa/Sao_Tome", "Africa/Tripoli", "Africa/Tunis", "Africa/Windhoek"
-        ],
-        "America": [
-            "America/Adak", "America/Anchorage", "America/Anguilla", "America/Antigua",
-            "America/Araguaina", "America/Argentina/Buenos_Aires", "America/Argentina/Catamarca",
-            "America/Argentina/Cordoba", "America/Argentina/Jujuy", "America/Argentina/La_Rioja",
-            "America/Argentina/Mendoza", "America/Argentina/Rio_Gallegos", "America/Argentina/Salta",
-            "America/Argentina/San_Juan", "America/Argentina/San_Luis", "America/Argentina/Tucuman",
-            "America/Argentina/Ushuaia", "America/Aruba", "America/Asuncion", "America/Atikokan",
-            "America/Bahia", "America/Bahia_Banderas", "America/Barbados", "America/Belem",
-            "America/Belize", "America/Blanc-Sablon", "America/Boa_Vista", "America/Bogota",
-            "America/Boise", "America/Cambridge_Bay", "America/Campo_Grande", "America/Cancun",
-            "America/Caracas", "America/Cayenne", "America/Cayman", "America/Chicago",
-            "America/Chihuahua", "America/Costa_Rica", "America/Creston", "America/Cuiaba",
-            "America/Curacao", "America/Danmarkshavn", "America/Dawson", "America/Dawson_Creek",
-            "America/Denver", "America/Detroit", "America/Dominica", "America/Edmonton",
-            "America/Eirunepe", "America/El_Salvador", "America/Fort_Nelson", "America/Fortaleza",
-            "America/Glace_Bay", "America/Goose_Bay", "America/Grand_Turk", "America/Grenada",
-            "America/Guadeloupe", "America/Guatemala", "America/Guayaquil", "America/Guyana",
-            "America/Halifax", "America/Havana", "America/Hermosillo",
-            "America/Indiana/Indianapolis", "America/Indiana/Knox", "America/Indiana/Marengo",
-            "America/Indiana/Petersburg", "America/Indiana/Tell_City", "America/Indiana/Vevay",
-            "America/Indiana/Vincennes", "America/Indiana/Winamac", "America/Inuvik",
-            "America/Iqaluit", "America/Jamaica", "America/Juneau",
-            "America/Kentucky/Louisville", "America/Kentucky/Monticello",
-            "America/Kralendijk", "America/La_Paz", "America/Lima", "America/Los_Angeles",
-            "America/Lower_Princes", "America/Maceio", "America/Managua", "America/Manaus",
-            "America/Marigot", "America/Martinique", "America/Matamoros", "America/Mazatlan",
-            "America/Menominee", "America/Merida", "America/Metlakatla", "America/Mexico_City",
-            "America/Miquelon", "America/Moncton", "America/Monterrey", "America/Montevideo",
-            "America/Montserrat", "America/Nassau", "America/New_York", "America/Nipigon",
-            "America/Nome", "America/Noronha", "America/North_Dakota/Beulah",
-            "America/North_Dakota/Center", "America/North_Dakota/New_Salem",
-            "America/Nuuk", "America/Ojinaga", "America/Panama", "America/Pangnirtung",
-            "America/Paramaribo", "America/Phoenix", "America/Port-au-Prince",
-            "America/Port_of_Spain", "America/Porto_Velho", "America/Puerto_Rico",
-            "America/Punta_Arenas", "America/Rainy_River", "America/Rankin_Inlet",
-            "America/Recife", "America/Regina", "America/Resolute", "America/Rio_Branco",
-            "America/Santa_Isabel", "America/Santarem", "America/Santiago",
-            "America/Santo_Domingo", "America/Sao_Paulo", "America/Scoresbysund",
-            "America/Sitka", "America/St_Barthelemy", "America/St_Johns", "America/St_Kitts",
-            "America/St_Lucia", "America/St_Thomas", "America/St_Vincent",
-            "America/Swift_Current", "America/Tegucigalpa", "America/Thule",
-            "America/Thunder_Bay", "America/Tijuana", "America/Toronto", "America/Tortola",
-            "America/Vancouver", "America/Whitehorse", "America/Winnipeg",
-            "America/Yakutat", "America/Yellowknife"
-        ],
-        "Antarctica": [
-            "Antarctica/Casey", "Antarctica/Davis", "Antarctica/DumontDUrville",
-            "Antarctica/Macquarie", "Antarctica/Mawson", "Antarctica/McMurdo",
-            "Antarctica/Palmer", "Antarctica/Rothera", "Antarctica/Syowa",
-            "Antarctica/Troll", "Antarctica/Vostok"
-        ],
-        "Asia": [
-            "Asia/Aden", "Asia/Almaty", "Asia/Amman", "Asia/Anadyr", "Asia/Aqtau",
-            "Asia/Aqtobe", "Asia/Ashgabat", "Asia/Atyrau", "Asia/Baghdad", "Asia/Bahrain",
-            "Asia/Baku", "Asia/Bangkok", "Asia/Barnaul", "Asia/Beirut", "Asia/Bishkek",
-            "Asia/Brunei", "Asia/Chita", "Asia/Choibalsan", "Asia/Colombo",
-            "Asia/Damascus", "Asia/Dhaka", "Asia/Dili", "Asia/Dubai", "Asia/Dushanbe",
-            "Asia/Famagusta", "Asia/Gaza", "Asia/Hebron", "Asia/Ho_Chi_Minh",
-            "Asia/Hong_Kong", "Asia/Hovd", "Asia/Irkutsk", "Asia/Jakarta", "Asia/Jayapura",
-            "Asia/Jerusalem", "Asia/Kabul", "Asia/Kamchatka", "Asia/Karachi",
-            "Asia/Kathmandu", "Asia/Khandyga", "Asia/Kolkata", "Asia/Krasnoyarsk",
-            "Asia/Kuala_Lumpur", "Asia/Kuching", "Asia/Kuwait", "Asia/Macau",
-            "Asia/Magadan", "Asia/Makassar", "Asia/Manila", "Asia/Muscat", "Asia/Nicosia",
-            "Asia/Novokuznetsk", "Asia/Novosibirsk", "Asia/Omsk", "Asia/Oral",
-            "Asia/Phnom_Penh", "Asia/Pontianak", "Asia/Pyongyang", "Asia/Qatar",
-            "Asia/Qostanay", "Asia/Qyzylorda", "Asia/Riyadh", "Asia/Sakhalin",
-            "Asia/Samarkand", "Asia/Seoul", "Asia/Shanghai", "Asia/Singapore",
-            "Asia/Srednekolymsk", "Asia/Taipei", "Asia/Tashkent", "Asia/Tbilisi",
-            "Asia/Tehran", "Asia/Thimphu", "Asia/Tokyo", "Asia/Tomsk", "Asia/Ulaanbaatar",
-            "Asia/Urumqi", "Asia/Ust-Nera", "Asia/Vientiane", "Asia/Vladivostok",
-            "Asia/Yakutsk", "Asia/Yangon", "Asia/Yekaterinburg", "Asia/Yerevan"
-        ],
-        "Atlantic": [
-            "Atlantic/Azores", "Atlantic/Bermuda", "Atlantic/Canary", "Atlantic/Cape_Verde",
-            "Atlantic/Faroe", "Atlantic/Jan_Mayen", "Atlantic/Madeira", "Atlantic/Reykjavik",
-            "Atlantic/South_Georgia", "Atlantic/St_Helena", "Atlantic/Stanley"
-        ],
-        "Australia": [
-            "Australia/Adelaide", "Australia/Brisbane", "Australia/Broken_Hill",
-            "Australia/Darwin", "Australia/Eucla", "Australia/Hobart", "Australia/Lindeman",
-            "Australia/Lord_Howe", "Australia/Melbourne", "Australia/Perth",
-            "Australia/Sydney"
-        ],
-        "Europe": [
-            "Europe/Amsterdam", "Europe/Andorra", "Europe/Astrakhan", "Europe/Athens",
-            "Europe/Belgrade", "Europe/Berlin", "Europe/Bratislava", "Europe/Brussels",
-            "Europe/Bucharest", "Europe/Budapest", "Europe/Busingen", "Europe/Chisinau",
-            "Europe/Copenhagen", "Europe/Dublin", "Europe/Gibraltar", "Europe/Guernsey",
-            "Europe/Helsinki", "Europe/Isle_of_Man", "Europe/Istanbul", "Europe/Jersey",
-            "Europe/Kaliningrad", "Europe/Kiev", "Europe/Kirov", "Europe/Lisbon",
-            "Europe/Ljubljana", "Europe/London", "Europe/Luxembourg", "Europe/Madrid",
-            "Europe/Malta", "Europe/Mariehamn", "Europe/Minsk", "Europe/Monaco",
-            "Europe/Moscow", "Europe/Oslo", "Europe/Paris", "Europe/Podgorica",
-            "Europe/Prague", "Europe/Riga", "Europe/Rome", "Europe/Samara",
-            "Europe/San_Marino", "Europe/Sarajevo", "Europe/Saratov", "Europe/Simferopol",
-            "Europe/Skopje", "Europe/Sofia", "Europe/Stockholm", "Europe/Tallinn",
-            "Europe/Tirane", "Europe/Ulyanovsk", "Europe/Uzhgorod", "Europe/Vaduz",
-            "Europe/Vatican", "Europe/Vienna", "Europe/Vilnius", "Europe/Volgograd",
-            "Europe/Warsaw", "Europe/Zagreb", "Europe/Zaporozhye", "Europe/Zurich"
-        ],
-        "Indian": [
-            "Indian/Antananarivo", "Indian/Chagos", "Indian/Christmas", "Indian/Cocos",
-            "Indian/Comoro", "Indian/Kerguelen", "Indian/Mahe", "Indian/Maldives",
-            "Indian/Mauritius", "Indian/Mayotte", "Indian/Reunion"
-        ],
-        "Pacific": [
-            "Pacific/Apia", "Pacific/Auckland", "Pacific/Bougainville", "Pacific/Chatham",
-            "Pacific/Chuuk", "Pacific/Easter", "Pacific/Efate", "Pacific/Fakaofo",
-            "Pacific/Fiji", "Pacific/Funafuti", "Pacific/Galapagos", "Pacific/Gambier",
-            "Pacific/Guadalcanal", "Pacific/Guam", "Pacific/Honolulu", "Pacific/Kiritimati",
-            "Pacific/Kosrae", "Pacific/Kwajalein", "Pacific/Majuro", "Pacific/Marquesas",
-            "Pacific/Midway", "Pacific/Nauru", "Pacific/Niue", "Pacific/Norfolk",
-            "Pacific/Noumea", "Pacific/Pago_Pago", "Pacific/Palau", "Pacific/Pitcairn",
-            "Pacific/Pohnpei", "Pacific/Port_Moresby", "Pacific/Rarotonga", "Pacific/Saipan",
-            "Pacific/Tahiti", "Pacific/Tarawa", "Pacific/Tongatapu", "Pacific/Wake",
-            "Pacific/Wallis"
-        ],
-        "Etc": [
-            "Etc/GMT", "Etc/GMT+1", "Etc/GMT+2", "Etc/GMT+3", "Etc/GMT+4", "Etc/GMT+5",
-            "Etc/GMT+6", "Etc/GMT+7", "Etc/GMT+8", "Etc/GMT+9", "Etc/GMT+10", "Etc/GMT+11",
-            "Etc/GMT+12", "Etc/GMT-1", "Etc/GMT-2", "Etc/GMT-3", "Etc/GMT-4", "Etc/GMT-5",
-            "Etc/GMT-6", "Etc/GMT-7", "Etc/GMT-8", "Etc/GMT-9", "Etc/GMT-10", "Etc/GMT-11",
-            "Etc/GMT-12", "Etc/GMT-13", "Etc/GMT-14", "Etc/UTC"
-        ]
+        "GMT-12:00": ["Pacific/Baker_Island", "Pacific/Wake"],
+        "GMT-11:00": ["Pacific/Midway", "Pacific/Niue", "Pacific/Pago_Pago"],
+        "GMT-10:00": ["Pacific/Honolulu", "Pacific/Rarotonga", "Pacific/Tahiti"],
+        "GMT-9:00": ["America/Anchorage", "America/Juneau", "Pacific/Gambier"],
+        "GMT-8:00": ["America/Los_Angeles", "America/Tijuana", "America/Vancouver"],
+        "GMT-7:00": ["America/Denver", "America/Phoenix", "America/Chihuahua"],
+        "GMT-6:00": ["America/Chicago", "America/Mexico_City", "America/Guatemala"],
+        "GMT-5:00": ["America/New_York", "America/Toronto", "America/Bogota"],
+        "GMT-4:00": ["America/Halifax", "America/Caracas", "America/Santiago"],
+        "GMT-3:00": ["America/Sao_Paulo", "America/Buenos_Aires", "America/Montevideo"],
+        "GMT-2:00": ["Atlantic/South_Georgia"],
+        "GMT-1:00": ["Atlantic/Azores", "Atlantic/Cape_Verde"],
+        "GMT+0:00": ["Europe/London", "Africa/Casablanca", "Atlantic/Reykjavik"],
+        "GMT+1:00": ["Europe/Paris", "Europe/Berlin", "Europe/Rome", "Africa/Lagos"],
+        "GMT+2:00": ["Europe/Athens", "Africa/Cairo", "Europe/Helsinki", "Africa/Johannesburg"],
+        "GMT+3:00": ["Europe/Moscow", "Asia/Riyadh", "Africa/Nairobi", "Asia/Baghdad"],
+        "GMT+4:00": ["Asia/Dubai", "Asia/Baku", "Indian/Mauritius"],
+        "GMT+5:00": ["Asia/Karachi", "Asia/Tashkent"],
+        "GMT+5:30": ["Asia/Kolkata", "Asia/Colombo"],
+        "GMT+6:00": ["Asia/Almaty", "Asia/Dhaka"],
+        "GMT+7:00": ["Asia/Bangkok", "Asia/Jakarta", "Asia/Ho_Chi_Minh"],
+        "GMT+8:00": ["Asia/Singapore", "Asia/Hong_Kong", "Asia/Shanghai", "Australia/Perth"],
+        "GMT+9:00": ["Asia/Tokyo", "Asia/Seoul", "Asia/Pyongyang"],
+        "GMT+10:00": ["Australia/Sydney", "Australia/Melbourne", "Pacific/Guam"],
+        "GMT+11:00": ["Pacific/Guadalcanal", "Australia/Lord_Howe"],
+        "GMT+12:00": ["Pacific/Auckland", "Pacific/Fiji"],
+        "GMT+13:00": ["Pacific/Tongatapu", "Pacific/Apia"],
+        "GMT+14:00": ["Pacific/Kiritimati"],
     };
 
     useEffect(() => {
@@ -904,8 +795,9 @@ export const Step4ColdEmail = ({ formData, setFormData, stepValidationErrors, em
                                         coldDelayAfterFollowUp: (!val || val < 1) ? "1" : val.toString(),
                                     }));
                                 }}
-                                className={`w-24 p-3 border rounded-lg text-center focus:ring-2 focus:ring-blue-500 bg-gray-700 text-white ${stepValidationErrors.coldDelayAfterFollowUp ? "border-red-500" : "border-gray-600"
-                                    }`}
+                                className={`w-24 p-3 border rounded-lg text-center focus:ring-2 focus:ring-blue-500 bg-gray-700 text-white ${
+                                    stepValidationErrors.coldDelayAfterFollowUp ? "border-red-500" : "border-gray-600"
+                                }`}
                                 placeholder="1"
                             />
                             <span className="text-gray-400">
@@ -932,10 +824,11 @@ export const Step4ColdEmail = ({ formData, setFormData, stepValidationErrors, em
                             <h4 className="text-white font-semibold mb-4">Mode de campagne</h4>
                             <div className="space-y-3">
                                 <label
-                                    className={`flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all ${formData.coldEmailMode === "existing"
+                                    className={`flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                                        formData.coldEmailMode === "existing"
                                             ? "border-blue-500 bg-blue-900/20"
                                             : "border-gray-600 hover:border-gray-500"
-                                        }`}
+                                    }`}
                                 >
                                     <input
                                         type="radio"
@@ -1009,10 +902,11 @@ export const Step4ColdEmail = ({ formData, setFormData, stepValidationErrors, em
                                 )}
 
                                 <label
-                                    className={`flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all ${formData.coldEmailMode === "auto"
+                                    className={`flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                                        formData.coldEmailMode === "auto"
                                             ? "border-green-500 bg-green-900/20"
                                             : "border-gray-600 hover:border-gray-500"
-                                        }`}
+                                    }`}
                                 >
                                     <input
                                         type="radio"
@@ -1068,7 +962,7 @@ export const Step4ColdEmail = ({ formData, setFormData, stepValidationErrors, em
                                 <div className="flex items-center gap-2 mb-5">
                                     <h4 className="text-white font-semibold">Configuration de la campagne</h4>
                                     <span className="text-xs text-blue-400 px-2 py-1 bg-blue-900/30 rounded">
-                                        Lecture seule — données depuis Emelia
+                                        Synchronisé depuis Emelia — modifiable
                                     </span>
                                 </div>
                                 {emeliaLoading ? (
@@ -1077,63 +971,177 @@ export const Step4ColdEmail = ({ formData, setFormData, stepValidationErrors, em
                                         Chargement des données...
                                     </div>
                                 ) : (
-                                    <div className="grid gap-4 sm:grid-cols-2 text-sm">
-                                        <div className="bg-gray-700/40 rounded-lg p-3">
-                                            <span className="text-gray-400 block mb-1">Timezone</span>
-                                            <p className="text-white font-medium">{formData.emeliaTimezone || "—"}</p>
+                                    <>
+                                        <div className="grid gap-6 sm:grid-cols-2 mb-6">
+                                            <div>
+                                                <label className="text-sm text-gray-400 mb-2 block">Fuseau horaire *</label>
+                                                <select
+                                                    value={formData.emeliaTimezone}
+                                                    onChange={(e) => setFormData(prev => ({ ...prev, emeliaTimezone: e.target.value }))}
+                                                    className={`w-full p-3 bg-gray-700 border rounded-lg text-white focus:ring-2 focus:ring-blue-500 ${stepValidationErrors.emeliaTimezone ? "border-red-500" : "border-gray-600"}`}
+                                                >
+                                                    <option value="">-- Sélectionner un fuseau horaire --</option>
+                                                    {Object.entries(timezoneOptions).map(([region, zones]) => (
+                                                        <optgroup key={region} label={region}>
+                                                            {zones.map(zone => (
+                                                                <option key={zone} value={zone}>{zone.replace(/_/g, ' ')}</option>
+                                                            ))}
+                                                        </optgroup>
+                                                    ))}
+                                                </select>
+                                                {stepValidationErrors.emeliaTimezone && (
+                                                    <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
+                                                        <AlertCircle size={12} />{stepValidationErrors.emeliaTimezone}
+                                                    </p>
+                                                )}
+                                            </div>
+                                            <div>
+                                                <label className="text-sm text-gray-400 mb-2 block">Max nouveaux/jour</label>
+                                                <input
+                                                    type="number" min="1" max="100"
+                                                    value={formData.emeliaMaxNewPerDay}
+                                                    onChange={(e) => setFormData(prev => ({ ...prev, emeliaMaxNewPerDay: e.target.value }))}
+                                                    className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500"
+                                                    placeholder="35"
+                                                />
+                                            </div>
                                         </div>
-                                        <div className="bg-gray-700/40 rounded-lg p-3">
-                                            <span className="text-gray-400 block mb-1">Max nouveaux/jour</span>
-                                            <p className="text-white font-medium">{formData.emeliaMaxNewPerDay || "—"}</p>
+
+                                        <div className="grid gap-6 sm:grid-cols-2 mb-6">
+                                            <div>
+                                                <label className="text-sm text-gray-400 mb-2 block">Limite journalière</label>
+                                                <input
+                                                    type="number" min="1"
+                                                    value={formData.emeliaDailyLimit}
+                                                    onChange={(e) => setFormData(prev => ({ ...prev, emeliaDailyLimit: e.target.value }))}
+                                                    className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500"
+                                                    placeholder="100"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="text-sm text-gray-400 mb-2 block">BCC (facultatif)</label>
+                                                <input
+                                                    type="email"
+                                                    value={formData.emeliaBcc}
+                                                    onChange={(e) => setFormData(prev => ({ ...prev, emeliaBcc: e.target.value }))}
+                                                    className={`w-full p-3 bg-gray-700 border rounded-lg text-white focus:ring-2 focus:ring-blue-500 ${stepValidationErrors.emeliaBcc ? "border-red-500" : "border-gray-600"}`}
+                                                    placeholder="email@example.com"
+                                                />
+                                                {stepValidationErrors.emeliaBcc && (
+                                                    <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
+                                                        <AlertCircle size={12} />{stepValidationErrors.emeliaBcc}
+                                                    </p>
+                                                )}
+                                            </div>
                                         </div>
-                                        <div className="bg-gray-700/40 rounded-lg p-3">
-                                            <span className="text-gray-400 block mb-1">Limite journalière</span>
-                                            <p className="text-white font-medium">{formData.emeliaDailyLimit || "—"}</p>
+
+                                        <div className="mb-6">
+                                            <label className="text-sm text-gray-400 mb-3 block">Jours d'envois *</label>
+                                            <div className="grid grid-cols-7 gap-2">
+                                                {joursOptions.map((jour) => (
+                                                    <button
+                                                        key={jour.id}
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const isSelected = formData.emeliaSendingDays.includes(jour.id);
+                                                            setFormData(prev => ({
+                                                                ...prev,
+                                                                emeliaSendingDays: isSelected
+                                                                    ? prev.emeliaSendingDays.filter(j => j !== jour.id)
+                                                                    : [...prev.emeliaSendingDays, jour.id]
+                                                            }));
+                                                        }}
+                                                        className={`p-3 rounded-lg border-2 transition-all ${formData.emeliaSendingDays.includes(jour.id)
+                                                            ? "border-blue-500 bg-blue-900/30 text-blue-300"
+                                                            : "border-gray-600 hover:border-gray-500 text-gray-400"}`}
+                                                    >
+                                                        <div className="text-center text-xs">{jour.label}</div>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                            {stepValidationErrors.emeliaSendingDays && (
+                                                <p className="text-red-400 text-xs mt-2 flex items-center gap-1">
+                                                    <AlertCircle size={12} />{stepValidationErrors.emeliaSendingDays}
+                                                </p>
+                                            )}
                                         </div>
-                                        <div className="bg-gray-700/40 rounded-lg p-3">
-                                            <span className="text-gray-400 block mb-1">BCC</span>
-                                            <p className="text-white font-medium">{formData.emeliaBcc || "—"}</p>
+
+                                        <div className="grid gap-6 sm:grid-cols-2 mb-6">
+                                            <div>
+                                                <label className="text-sm text-gray-400 mb-2 block">Entre *</label>
+                                                <input
+                                                    type="time"
+                                                    value={formData.emeliaSendingTimeStart}
+                                                    onChange={(e) => setFormData(prev => ({ ...prev, emeliaSendingTimeStart: e.target.value }))}
+                                                    className={`w-full p-3 bg-gray-700 border rounded-lg text-white focus:ring-2 focus:ring-blue-500 ${stepValidationErrors.emeliaSendingTimeStart ? "border-red-500" : "border-gray-600"}`}
+                                                />
+                                                {stepValidationErrors.emeliaSendingTimeStart && (
+                                                    <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
+                                                        <AlertCircle size={12} />{stepValidationErrors.emeliaSendingTimeStart}
+                                                    </p>
+                                                )}
+                                            </div>
+                                            <div>
+                                                <label className="text-sm text-gray-400 mb-2 block">et *</label>
+                                                <input
+                                                    type="time"
+                                                    value={formData.emeliaSendingTimeEnd}
+                                                    onChange={(e) => setFormData(prev => ({ ...prev, emeliaSendingTimeEnd: e.target.value }))}
+                                                    className={`w-full p-3 bg-gray-700 border rounded-lg text-white focus:ring-2 focus:ring-blue-500 ${stepValidationErrors.emeliaSendingTimeEnd ? "border-red-500" : "border-gray-600"}`}
+                                                />
+                                                {stepValidationErrors.emeliaSendingTimeEnd && (
+                                                    <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
+                                                        <AlertCircle size={12} />{stepValidationErrors.emeliaSendingTimeEnd}
+                                                    </p>
+                                                )}
+                                            </div>
                                         </div>
-                                        <div className="bg-gray-700/40 rounded-lg p-3">
-                                            <span className="text-gray-400 block mb-1">Horaires d'envoi</span>
-                                            <p className="text-white font-medium">
-                                                {formData.emeliaSendingTimeStart && formData.emeliaSendingTimeEnd
-                                                    ? `${formData.emeliaSendingTimeStart} → ${formData.emeliaSendingTimeEnd}`
-                                                    : "—"}
-                                            </p>
-                                        </div>
-                                        <div className="bg-gray-700/40 rounded-lg p-3">
-                                            <span className="text-gray-400 block mb-1">Jours d'envoi</span>
-                                            <p className="text-white font-medium">
-                                                {formData.emeliaSendingDays?.length > 0
-                                                    ? formData.emeliaSendingDays.join(", ")
-                                                    : "—"}
-                                            </p>
-                                        </div>
-                                        <div className="bg-gray-700/40 rounded-lg p-3">
-                                            <span className="text-gray-400 block mb-1">Arrêt si</span>
-                                            <p className="text-white font-medium text-xs">
+
+                                        <div className="mb-6">
+                                            <label className="text-sm text-gray-400 mb-3 block">Ne plus envoyer si l'utilisateur :</label>
+                                            <div className="space-y-2">
                                                 {[
-                                                    formData.emeliaStopIfReply && "Répond",
-                                                    formData.emeliaStopIfClick && "Clique",
-                                                    formData.emeliaStopIfOpen && "Ouvre",
-                                                ]
-                                                    .filter(Boolean)
-                                                    .join(", ") || "—"}
-                                            </p>
+                                                    { key: "emeliaStopIfReply", label: "Répond" },
+                                                    { key: "emeliaStopIfClick", label: "Clique sur un lien" },
+                                                    { key: "emeliaStopIfOpen", label: "Ouvre l'email" },
+                                                ].map(({ key, label }) => (
+                                                    <label key={key} className="flex items-center gap-3 cursor-pointer">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={formData[key]}
+                                                            onChange={(e) => setFormData(prev => ({ ...prev, [key]: e.target.checked }))}
+                                                            className="w-4 h-4 rounded border-gray-600 text-blue-600 bg-gray-700"
+                                                        />
+                                                        <span className="text-white">{label}</span>
+                                                    </label>
+                                                ))}
+                                            </div>
                                         </div>
-                                        <div className="bg-gray-700/40 rounded-lg p-3">
-                                            <span className="text-gray-400 block mb-1">Tracking</span>
-                                            <p className="text-white font-medium text-xs">
+
+                                        <div>
+                                            <label className="text-sm text-gray-400 mb-3 block">Réglages supplémentaires :</label>
+                                            <div className="space-y-3">
                                                 {[
-                                                    formData.emeliaTrackOpens && "Ouvertures",
-                                                    formData.emeliaTrackClicks && "Clics",
-                                                ]
-                                                    .filter(Boolean)
-                                                    .join(", ") || "—"}
-                                            </p>
+                                                    { key: "emeliaAddToBlacklistIfUnsubscribed", label: "Ajouter en blacklist si 'UNSUBSCRIBED'" },
+                                                    { key: "emeliaTrackOpens", label: "Tracker les ouvertures d'email" },
+                                                    { key: "emeliaTrackClicks", label: "Tracker les liens cliqués" },
+                                                ].map(({ key, label }) => (
+                                                    <label key={key} className="flex items-center justify-between p-3 bg-gray-700/50 rounded-lg cursor-pointer hover:bg-gray-700/70">
+                                                        <span className="text-white text-sm">{label}</span>
+                                                        <div className="relative">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={formData[key]}
+                                                                onChange={(e) => setFormData(prev => ({ ...prev, [key]: e.target.checked }))}
+                                                                className="sr-only peer"
+                                                            />
+                                                            <div className="w-11 h-6 bg-gray-600 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                                        </div>
+                                                    </label>
+                                                ))}
+                                            </div>
                                         </div>
-                                    </div>
+                                    </>
                                 )}
                             </div>
 
@@ -1192,21 +1200,28 @@ export const Step4ColdEmail = ({ formData, setFormData, stepValidationErrors, em
 
                                 <div className="grid gap-6 sm:grid-cols-2 mb-6">
                                     <div>
-                                        <label className="text-sm text-gray-400 mb-2 block">Zone géographique</label>
+                                        <label className="text-sm text-gray-400 mb-2 block">Zone géographique *</label>
                                         <select
                                             value={formData.emeliaTimezone}
-                                            onChange={(e) => setFormData(prev => ({ ...prev, emeliaTimezone: e.target.value }))}
-                                            className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500"
+                                            onChange={(e) => setFormData((prev) => ({ ...prev, emeliaTimezone: e.target.value }))}
+                                            className={`w-full p-3 bg-gray-700 border rounded-lg text-white focus:ring-2 focus:ring-blue-500 ${stepValidationErrors.emeliaTimezone ? "border-red-500" : "border-gray-600"}`}
                                         >
                                             <option value="">-- Sélectionner un fuseau horaire --</option>
-                                            {Object.entries(timezoneOptions).map(([region, zones]) => (
-                                                <optgroup key={region} label={region}>
-                                                    {zones.map(zone => (
-                                                        <option key={zone} value={zone}>{zone.replace(/_/g, ' ')}</option>
+                                            {Object.entries(timezoneOptions).map(([gmt, zones]) => (
+                                                <optgroup key={gmt} label={gmt}>
+                                                    {zones.map((zone) => (
+                                                        <option key={zone} value={zone}>
+                                                            {zone.replace(/_/g, " ")}
+                                                        </option>
                                                     ))}
                                                 </optgroup>
                                             ))}
                                         </select>
+                                        {stepValidationErrors.emeliaTimezone && (
+                                            <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
+                                                <AlertCircle size={12} />{stepValidationErrors.emeliaTimezone}
+                                            </p>
+                                        )}
                                     </div>
                                     <div>
                                         <label className="text-sm text-gray-400 mb-2 block">
@@ -1245,14 +1260,19 @@ export const Step4ColdEmail = ({ formData, setFormData, stepValidationErrors, em
                                             type="email"
                                             value={formData.emeliaBcc}
                                             onChange={(e) => setFormData((prev) => ({ ...prev, emeliaBcc: e.target.value }))}
-                                            className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500"
+                                            className={`w-full p-3 bg-gray-700 border rounded-lg text-white focus:ring-2 focus:ring-blue-500 ${stepValidationErrors.emeliaBcc ? "border-red-500" : "border-gray-600"}`}
                                             placeholder="email@example.com"
                                         />
+                                        {stepValidationErrors.emeliaBcc && (
+                                            <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
+                                                <AlertCircle size={12} />{stepValidationErrors.emeliaBcc}
+                                            </p>
+                                        )}
                                     </div>
                                 </div>
 
                                 <div className="mb-6">
-                                    <label className="text-sm text-gray-400 mb-3 block">Jours d'envois</label>
+                                    <label className="text-sm text-gray-400 mb-3 block">Jours d'envois *</label>
                                     <div className="grid grid-cols-7 gap-2">
                                         {joursOptions.map((jour) => (
                                             <button
@@ -1267,35 +1287,51 @@ export const Step4ColdEmail = ({ formData, setFormData, stepValidationErrors, em
                                                             : [...prev.emeliaSendingDays, jour.id],
                                                     }));
                                                 }}
-                                                className={`p-3 rounded-lg border-2 transition-all ${formData.emeliaSendingDays.includes(jour.id)
+                                                className={`p-3 rounded-lg border-2 transition-all ${
+                                                    formData.emeliaSendingDays.includes(jour.id)
                                                         ? "border-blue-500 bg-blue-900/30 text-blue-300"
                                                         : "border-gray-600 hover:border-gray-500 text-gray-400"
-                                                    }`}
+                                                }`}
                                             >
                                                 <div className="text-center text-xs">{jour.label}</div>
                                             </button>
                                         ))}
                                     </div>
+                                    {stepValidationErrors.emeliaSendingDays && (
+                                        <p className="text-red-400 text-xs mt-2 flex items-center gap-1">
+                                            <AlertCircle size={12} />{stepValidationErrors.emeliaSendingDays}
+                                        </p>
+                                    )}
                                 </div>
 
                                 <div className="grid gap-6 sm:grid-cols-2 mb-6">
                                     <div>
-                                        <label className="text-sm text-gray-400 mb-2 block">Entre</label>
+                                        <label className="text-sm text-gray-400 mb-2 block">Entre *</label>
                                         <input
                                             type="time"
                                             value={formData.emeliaSendingTimeStart}
                                             onChange={(e) => setFormData((prev) => ({ ...prev, emeliaSendingTimeStart: e.target.value }))}
-                                            className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500"
+                                            className={`w-full p-3 bg-gray-700 border rounded-lg text-white focus:ring-2 focus:ring-blue-500 ${stepValidationErrors.emeliaSendingTimeStart ? "border-red-500" : "border-gray-600"}`}
                                         />
+                                        {stepValidationErrors.emeliaSendingTimeStart && (
+                                            <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
+                                                <AlertCircle size={12} />{stepValidationErrors.emeliaSendingTimeStart}
+                                            </p>
+                                        )}
                                     </div>
                                     <div>
-                                        <label className="text-sm text-gray-400 mb-2 block">et</label>
+                                        <label className="text-sm text-gray-400 mb-2 block">et *</label>
                                         <input
                                             type="time"
                                             value={formData.emeliaSendingTimeEnd}
                                             onChange={(e) => setFormData((prev) => ({ ...prev, emeliaSendingTimeEnd: e.target.value }))}
-                                            className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500"
+                                            className={`w-full p-3 bg-gray-700 border rounded-lg text-white focus:ring-2 focus:ring-blue-500 ${stepValidationErrors.emeliaSendingTimeEnd ? "border-red-500" : "border-gray-600"}`}
                                         />
+                                        {stepValidationErrors.emeliaSendingTimeEnd && (
+                                            <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
+                                                <AlertCircle size={12} />{stepValidationErrors.emeliaSendingTimeEnd}
+                                            </p>
+                                        )}
                                     </div>
                                 </div>
 
