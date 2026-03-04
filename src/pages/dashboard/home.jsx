@@ -80,6 +80,7 @@ export function Home() {
         // Charger les contacts
         const contactsResponse = await getAllContacts();
 
+        console.log(contactsResponse.result.data.len);
         
         
         setContactsData(contactsResponse.result.data || []);
@@ -175,7 +176,6 @@ export function Home() {
   const totalCampaigns = campaignsData.length;
   const activeCampaigns = campaignsData.filter(c => c.statut === "Actif").length;
   const totalContacts = contactsData.length;
-  console.log(contactsData);
   const messagesSent = contactsStats?.messageEnvoye || 0;
   const responsesReceived = contactsStats?.reponseRecue || 0;
   // Calcul correct du taux de réponse : Réponses reçues / Messages envoyés
@@ -273,7 +273,7 @@ export function Home() {
       color: "from-violet-plasma to-secondary-400",
       icon: UserGroupIcon,
       title: "Contacts Totaux",
-      value: totalContacts.toString(),
+      value: contactsStats.total,
       footer: {
         color: "text-violet-plasma",
         value: contactsStats?.interesse || "0",
@@ -625,7 +625,7 @@ export function Home() {
             },
             {
               title: "Contacts/Campagne",
-              value: Math.round(totalContacts / Math.max(activeCampaigns, 1)),
+              value: Math.round(contactsStats.total / Math.max(activeCampaigns, 1)),
               isNumber: true,
               icon: UserGroupIcon,
               gradient: "from-orange-400 to-red-500"
