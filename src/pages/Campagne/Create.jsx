@@ -567,7 +567,7 @@ export function Create() {
       }, 2000);
     } catch (error) {
       console.error("Erreur lors de la création:", error);
-      toastify.error("Une erreur s'est produite");
+      toastify.error(error.response.data.message || "Une erreur est survenue lors de la création de la campagne");
     } finally {
       setIsSubmitting(false);
     }

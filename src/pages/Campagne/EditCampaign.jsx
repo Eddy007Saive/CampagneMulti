@@ -787,7 +787,7 @@ const loadCampaignDetails = async (campaignId) => {
       }, 2000);
     } catch (error) {
       console.error("Erreur lors de la modification:", error);
-      toastify.error("Une erreur s'est produite");
+      toastify.error(error.response?.data?.message || "Erreur lors de la modification de la campagne");
     } finally {
       setIsSubmitting(false);
     }
