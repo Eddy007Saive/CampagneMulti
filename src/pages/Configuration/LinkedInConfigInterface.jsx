@@ -7,7 +7,7 @@ import {
 } from '@/services/Configuration';
 import { testConnection } from '@/services/Emelia';
 import { testConnection as testConnectionGHL } from '@/services/GodHighLevel';
-import { testLinkedInConnection, validateCookieFormat } from '@/services/Linkedin';
+import { validateCookieFormat } from '@/services/Linkedin';
 import Loading from '@/components/Loading';
 
 export function LinkedInConfigInterface() {
@@ -241,56 +241,6 @@ export function LinkedInConfigInterface() {
           message: isValid ? 'Clé API valide' : 'Clé API invalide ou manquante'
         }
       }));
-    }
-  };
-
-  // Nouveau : Test de connexion LinkedIn
-  const handleTestLinkedInConnection = async () => {
-    if (!config.liAt) {
-      showNotification('Veuillez entrer un cookie LinkedIn', 'error');
-      return;
-    }
-
-    if (!config.userAgent) {
-      showNotification('Veuillez entrer un User-Agent', 'error');
-      return;
-    }
-
-    setIsTestingLinkedIn(true);
-    try {
-      const result = await testLinkedInConnection(config.liAt, config.userAgent);
-
-      if (result.success) {
-        showNotification('✅ Cookie LinkedIn validé avec succès !', 'success');
-        setValidationStatus(prev => ({
-          ...prev,
-          liAt: {
-            valid: true,
-            message: result.message + (result.data?.profileId ? ` (ID: ${result.data.profileId})` : '')
-          }
-        }));
-      } else {
-        showNotification('❌ ' + result.message, 'error');
-        setValidationStatus(prev => ({
-          ...prev,
-          liAt: {
-            valid: false,
-            message: result.message
-          }
-        }));
-      }
-    } catch (error) {
-      console.error('Erreur test LinkedIn:', error);
-      showNotification('❌ Erreur lors du test de connexion LinkedIn', 'error');
-      setValidationStatus(prev => ({
-        ...prev,
-        liAt: {
-          valid: false,
-          message: 'Erreur de connexion'
-        }
-      }));
-    } finally {
-      setIsTestingLinkedIn(false);
     }
   };
 
@@ -586,25 +536,6 @@ export function LinkedInConfigInterface() {
                       {showCookies ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
                   </div>
-                  <button
-                    onClick={handleTestLinkedInConnection}
-                    disabled={isTestingLinkedIn || !config.liAt || !config.userAgent}
-                    className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 
-                      text-white font-semibold rounded-lg
-                      hover:shadow-[0_0_20px_rgba(59,130,246,0.5)] transition-all duration-300 
-                      disabled:opacity-50 disabled:cursor-not-allowed 
-                      flex items-center justify-center gap-2 whitespace-nowrap
-                      sm:w-auto w-full"
-                  >
-                    {isTestingLinkedIn ? (
-                      <>
-                        <Loader className="w-4 h-4 animate-spin" />
-                        Test...
-                      </>
-                    ) : (
-                      'Tester connexion'
-                    )}
-                  </button>
                 </div>
                 {validationStatus.liAt && (
                   <div className={`mt-2 flex items-center gap-2 text-sm ${validationStatus.liAt.valid ? 'text-green-400' : 'text-red-400'}`}>
@@ -617,7 +548,7 @@ export function LinkedInConfigInterface() {
                   </div>
                 )}
                 <p className="mt-2 text-sm text-[#00CFFF]/60">
-                  Minimum 100 caractères, sans espaces. Utilisez le bouton de test pour vérifier la validité.
+                  Minimum 100 caractères, sans espaces.
                 </p>
               </div>
             </div>
