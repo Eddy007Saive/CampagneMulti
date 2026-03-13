@@ -78,6 +78,7 @@ export function Create() {
     profilsParJour: "",
     messagesParJour: "",
     joursRafraichissement: [],
+    emeliaProviderId: "",
     relances: [
       {
         id: Date.now(),
@@ -511,6 +512,7 @@ export function Create() {
         "emeliaAddToBlacklistIfUnsubscribed": formData.emeliaAddToBlacklistIfUnsubscribed,
         "emeliaTrackOpens": formData.emeliaTrackOpens,
         "emeliaTrackClicks": formData.emeliaTrackClicks,
+        "emeliaProviderId": formData.emeliaProviderId || "",
         // 🆕 Séquence d'emails (format Emelia)
         "emailSequence": formData.coldEmail ? JSON.stringify(
           formData.emailSequence.map(step => ({
@@ -533,6 +535,7 @@ export function Create() {
       };
 
       console.log('Données campagne à envoyer:', campagneData);
+
 
       const response = await createCampagne(campagneData);
       toastify.success(response.message || "Campagne créée avec succès");

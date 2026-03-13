@@ -91,6 +91,7 @@ export function EditCampaign() {
     emeliaAddToBlacklistIfUnsubscribed: false,
     emeliaTrackOpens: true,
     emeliaTrackClicks: true,
+    emeliaProviderId: "",
     emailSequence: [
       {
         id: Date.now(),
@@ -122,6 +123,8 @@ export function EditCampaign() {
         if (response && response.data) {
           const campaign = response.data;
           const emeliaCamp = campaign.emeliaData?.campaign;
+          console.log(emeliaCamp);
+          
 
           // Parser les relances
           let relancesData = [];
@@ -195,6 +198,7 @@ export function EditCampaign() {
             nom: campaign["nom"] || "",
             posteRecherche: campaign["poste"] || "",
             zoneGeographique: campaign["zone"] || "",
+            emeliaProviderId: campaign["emeliaProviderId"] || "",
             seniorite: campaign.seniorite || "",
             tailleEntreprise: campaign.tailleEntreprise || "",
             languesParlees: campaign["langues"] || "",
@@ -229,6 +233,7 @@ export function EditCampaign() {
             emeliaTrackOpens: emeliaCamp?.schedule?.trackOpens ?? (campaign.emeliaTrackOpens ?? true),
             emeliaTrackClicks: emeliaCamp?.schedule?.trackLinks ?? (campaign.emeliaTrackClicks ?? true),
             emailSequence: emailSequenceData,
+            emeliaProviderId: emeliaCamp?.provider || "",
           };
 
           setFormData(newFormData);
@@ -402,6 +407,7 @@ export function EditCampaign() {
         .sort((a, b) => a.joursApres - b.joursApres);
 
       const campagneData = {
+        "emeliaProviderId": formData.emeliaProviderId || "",
         "Nom de la campagne": formData.nom,
         "Poste recherché": formData.posteRecherche,
         "Zone géographique": formData.zoneGeographique,

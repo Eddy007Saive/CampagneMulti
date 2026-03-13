@@ -18,6 +18,7 @@ import { getConfiguration, upsertConfiguration } from "@/services/Configuration"
 import { testConnection } from "@/services/Emelia";
 import * as emeliaService from "@/services/Emelia";
 import toastify from "@/utils/toastify";
+import EmeliaProviderSelect  from "@/components/providers/Emeliaproviderselect";
 
 // ─── État vide Emelia (référence stable hors composant) ───
 const getEmeliaEmptyState = () => ({
@@ -38,6 +39,7 @@ const getEmeliaEmptyState = () => ({
     emeliaAddToBlacklistIfUnsubscribed: false,
     emeliaTrackOpens: false,
     emeliaTrackClicks: false,
+    emeliaProviderId: "",
     emailSequence: [
         {
             id: Date.now(),
@@ -313,6 +315,8 @@ const EmailTimeline = ({
     );
 };
 
+
+
 // ─── Composant principal ───
 export const Step4ColdEmail = ({ formData, setFormData, stepValidationErrors, emailStepSelected, setEmailStepSelected }) => {
     const [emeliaConfigured, setEmeliaConfigured] = useState(false);
@@ -324,11 +328,13 @@ export const Step4ColdEmail = ({ formData, setFormData, stepValidationErrors, em
     const [emeliaConnected, setEmeliaConnected] = useState(false);
     const [emeliaLoading, setEmeliaLoading] = useState(false);
     const [emeliaCampaigns, setEmeliaCampaigns] = useState([]);
+    const [emeliaProviders, setEmeliaProviders] = useState([]);
+    const [emeliaProvidersLoading, setEmeliaProvidersLoading] = useState(false);
     const [isEditMode, setIsEditMode] = useState(false);
+    const [showAddModal, setShowAddModal] = useState(false);
 
-    // ─────────────────────────────────────────────────
-    // 🔑 FONCTION CENTRALISÉE : reset complet Emelia
-    // ─────────────────────────────────────────────────
+
+ 
     const resetEmeliaState = (message = "Campagne dissociée — formulaire réinitialisé") => {
         setFormData((prev) => ({
             ...prev,
@@ -461,7 +467,10 @@ export const Step4ColdEmail = ({ formData, setFormData, stepValidationErrors, em
                 if (hasEmeliaKey) {
                     setEmeliaApiKey(config.data.emeliaApiKeyMasked);
                     setEmeliaConnected(true);
-                    await fetchEmeliaCampaigns();
+                    await Promise.all([
+                        fetchEmeliaCampaigns(),
+                        fetchEmeliaProviders(),
+                    ]);
                     if (formData.coldCampaignIdEmelia) {
                         await loadCampaignDetails(formData.coldCampaignIdEmelia);
                     }
@@ -490,7 +499,17 @@ export const Step4ColdEmail = ({ formData, setFormData, stepValidationErrors, em
                 setEmeliaConnected(true);
                 setEmeliaApiKey(tempEmeliaKey);
                 setTempEmeliaKey("");
-                fetchEmeliaCampaigns();
+                await Promise.all([
+                    fetchEmeliaCampaigns(),
+                    fetchEmeliaProviders(),
+                ]);
+                if (saved.emeliaProviderId) {
+                    await emelia.updateCampaignProviders(saved.cold_campaign_id_emelia, {
+                        providerId: saved.emeliaProviderId,
+                        useManyProviders: false,
+                        providersUsed: []
+                    });
+                }
                 return true;
             } else {
                 toastify.error("Erreur lors de la sauvegarde");
@@ -525,10 +544,25 @@ export const Step4ColdEmail = ({ formData, setFormData, stepValidationErrors, em
         }
     };
 
+    const fetchEmeliaProviders = async () => {
+        setEmeliaProvidersLoading(true);
+        try {
+            const result = await emeliaService.getEmailProviders();
+            setEmeliaProviders(result.data.providers);
+        } catch (error) {
+            console.error("Erreur récupération providers:", error);
+            toastify.error("Impossible de récupérer les expéditeurs");
+            setEmeliaProviders([]);
+        } finally {
+            setEmeliaProvidersLoading(false);
+        }
+    };
+
     // ─── Déconnexion complète Emelia ───
     const disconnectEmelia = () => {
         setEmeliaConnected(false);
         setEmeliaCampaigns([]);
+        setEmeliaProviders([]);
         resetEmeliaState("Compte Emelia déconnecté — formulaire réinitialisé");
     };
 
@@ -612,6 +646,16 @@ export const Step4ColdEmail = ({ formData, setFormData, stepValidationErrors, em
         { id: "Samedi", label: "Samedi" },
         { id: "Dimanche", label: "Dimanche" },
     ];
+
+    // ─── Props communes pour EmeliaProviderSelect ───
+    const providerSelectProps = {
+        formData,
+        setFormData,
+        emeliaProviders,
+        emeliaProvidersLoading,
+        fetchEmeliaProviders,
+        stepValidationErrors,
+    };
 
     // ─── LOADING ───
     if (isCheckingEmelia) {
@@ -758,7 +802,6 @@ export const Step4ColdEmail = ({ formData, setFormData, stepValidationErrors, em
                             checked={formData.coldEmail}
                             onChange={(e) => {
                                 if (!e.target.checked) {
-                                    // Désactivation → reset complet
                                     resetEmeliaState("Cold Email désactivé — configuration réinitialisée");
                                 } else {
                                     setFormData((prev) => ({ ...prev, coldEmail: true }));
@@ -943,7 +986,6 @@ export const Step4ColdEmail = ({ formData, setFormData, stepValidationErrors, em
                                         </p>
                                     </div>
                                 </div>
-                                {/* ✅ Utilise dissocierCampagne → reset complet */}
                                 <button
                                     type="button"
                                     onClick={dissocierCampagne}
@@ -955,7 +997,9 @@ export const Step4ColdEmail = ({ formData, setFormData, stepValidationErrors, em
                         </div>
                     )}
 
-                    {/* MODE EXISTING */}
+                    {/* ════════════════════════════════════════
+                        MODE EXISTING
+                    ════════════════════════════════════════ */}
                     {formData.coldEmailMode === "existing" && formData.coldCampaignIdEmelia && (
                         <>
                             <div className="p-6 bg-gray-800 rounded-lg border-2 border-blue-500/30">
@@ -972,6 +1016,9 @@ export const Step4ColdEmail = ({ formData, setFormData, stepValidationErrors, em
                                     </div>
                                 ) : (
                                     <>
+                                        {/* ─── Expéditeur ─── */}
+                                        <EmeliaProviderSelect {...providerSelectProps} accentColor="blue" />
+
                                         <div className="grid gap-6 sm:grid-cols-2 mb-6">
                                             <div>
                                                 <label className="text-sm text-gray-400 mb-2 block">Fuseau horaire *</label>
@@ -1192,11 +1239,16 @@ export const Step4ColdEmail = ({ formData, setFormData, stepValidationErrors, em
                         </>
                     )}
 
-                    {/* MODE AUTO */}
+                    {/* ════════════════════════════════════════
+                        MODE AUTO
+                    ════════════════════════════════════════ */}
                     {formData.coldEmailMode === "auto" && (
                         <>
                             <div className="p-6 bg-gray-800 rounded-lg border-2 border-gray-700">
                                 <h4 className="text-white font-semibold mb-4">Configuration de la campagne Emelia</h4>
+
+                                {/* ─── Expéditeur ─── */}
+                                <EmeliaProviderSelect {...providerSelectProps} accentColor="green" />
 
                                 <div className="grid gap-6 sm:grid-cols-2 mb-6">
                                     <div>

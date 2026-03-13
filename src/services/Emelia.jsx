@@ -91,3 +91,42 @@ export const getCampaignStatistics = async (campaignId) => {
   }
 }
 
+export const getEmailProviders = async () => {
+  try {
+    const response = await apiClient.get(`${CONTACTS_ENDPOINT}/providers`);
+    return response.data
+  }
+  catch (error) {
+    console.log(error);
+    throw {
+      response: {
+        data: {
+          errors: error.response?.data?.error || error.response?.data?.message || 'Erreur lors de la création du contact'
+        }
+      }
+    };
+  }
+}
+
+export const addEmailProviders = async (providerData) => {
+  try {
+    const response = await apiClient.post(`${CONTACTS_ENDPOINT}/providers`,providerData);
+    return response.data
+  }
+  catch (error) {
+    console.log(error);
+    throw {
+      response: {
+        data: {
+          errors: error.response?.data?.error || error.response?.data?.message || 'Erreur lors de la création du contact'
+        }
+      }
+    };
+  }
+}
+
+
+
+
+
+
